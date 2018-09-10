@@ -1,0 +1,164 @@
+#[macro_use]
+extern crate bitflags;
+#[macro_use]
+extern crate enum_primitive;
+
+extern crate enet_sys as ll;
+
+pub mod address;
+pub mod host;
+pub mod packet;
+pub mod peer;
+pub mod version;
+
+pub use self::address::Address;
+pub use self::host::Host;
+pub use self::packet::Packet;
+pub use self::peer::Peer;
+pub use self::version::Version;
+
+////////////////////////////////////////////////////////////////////////////////
+//  typedefs                                                                  //
+////////////////////////////////////////////////////////////////////////////////
+
+pub type EnetResult<T> = Result<T, Error>;
+
+////////////////////////////////////////////////////////////////////////////////
+//  statics                                                                   //
+////////////////////////////////////////////////////////////////////////////////
+
+static IS_ENET_CONTEXT_ALIVE : std::sync::atomic::AtomicBool =
+  std::sync::atomic::ATOMIC_BOOL_INIT;
+
+////////////////////////////////////////////////////////////////////////////////
+//  structs                                                                   //
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone)]
+pub struct Enet {
+  enetdrop : std::sync::Arc<EnetDrop>
+}
+
+#[derive(Clone, Debug)]
+pub struct EnetDrop;
+
+////////////////////////////////////////////////////////////////////////////////
+//  enums                                                                     //
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone, Debug)]
+pub enum Error {
+  Initialize(String),
+  ServerCreate(host::HostCreateError),
+  ClientCreate(host::HostCreateError)
+}
+
+#[derive(Debug)]
+pub enum Event {
+  Connect {
+    peer : Peer,
+    data : u32
+  },
+  Disconnect {
+    peer : Peer,
+    data : u32
+  },
+  Receive {
+    peer :       Peer,
+    channel_id : u8,
+    packet :     packet::PacketRecv
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  functions                                                                 //
+////////////////////////////////////////////////////////////////////////////////
+
+pub fn initialize() -> EnetResult<Enet> {
+  Enet::new()
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  impls                                                                     //
+////////////////////////////////////////////////////////////////////////////////
+
+impl Enet {
+  fn new() -> EnetResult<Self> {
+    unsafe {
+      let was_alive =
+        IS_ENET_CONTEXT_ALIVE.swap(true, std::sync::atomic::Ordering::Relaxed);
+      if was_alive {
+        return Err(Error::Initialize(
+          "`Enet` cannot be initialized more than once".to_owned()
+        ))
+      }
+      if ll::enet_initialize() < 0 {
+        return Err(Error::Initialize(
+          "`enet_initialize` returned an error".to_owned()
+        ))
+      }
+      Ok(Enet {
+        enetdrop : std::sync::Arc::new(EnetDrop)
+      })
+    }
+  }
+
+  pub fn client_host_create(
+    &self,
+    peer_count : u32,
+    incoming_bandwidth : Option<u32>,
+    outgoing_bandwidth : Option<u32>
+  ) -> EnetResult<Host> {
+    Ok(try!(
+      Host::new(
+        None,
+        peer_count,
+        None,
+        incoming_bandwidth,
+        outgoing_bandwidth,
+        self.enetdrop.clone()
+      ).map_err(Error::ClientCreate)
+    ))
+  }
+
+  pub fn server_host_create(
+    &self,
+    address : Address,
+    peer_count : u32,
+    channel_limit : Option<usize>,
+    incoming_bandwidth : Option<u32>,
+    outgoing_bandwidth : Option<u32>
+  ) -> EnetResult<Host> {
+    Ok(try!(
+      Host::new(
+        Some(address),
+        peer_count,
+        channel_limit,
+        incoming_bandwidth,
+        outgoing_bandwidth,
+        self.enetdrop.clone()
+      ).map_err(Error::ServerCreate)
+    ))
+  }
+}
+
+impl Drop for EnetDrop {
+  #[inline]
+  fn drop(&mut self) {
+    let was_alive =
+      IS_ENET_CONTEXT_ALIVE.swap(false, std::sync::atomic::Ordering::Relaxed);
+    assert!(was_alive);
+
+    unsafe { ll::enet_deinitialize() }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  tests                                                                     //
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+  #[test]
+  fn it_works() {}
+}
