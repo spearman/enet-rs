@@ -59,6 +59,12 @@ impl Address {
     self.raw.port
   }
 } // end impl Address
+impl Default for Address {
+  /// 127.0.0.1:80
+  fn default() -> Self {
+    Address::with_hostname ("127.0.0.1", 80).unwrap()
+  }
+}
 
 impl From<std::ffi::NulError> for AddressError {
   fn from(err : std::ffi::NulError) -> AddressError {
