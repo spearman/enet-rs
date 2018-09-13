@@ -14,12 +14,11 @@ fn main() {
   println!("...ENet initialized");
 
   println!("creating ENet client host...");
-  let mut client = enet
-    .client_host_create(
-      1,               // only allow 1 outgoing connection
-      Some(57600 / 8), // 56 Kbps downstream bandwidth
-      Some(14400 / 8)  // 14 Kbps upstream bandwidth
-    ).unwrap();
+  let mut client = enet.client_host_create(
+    1,                // only allow 1 outgoing connection
+    Some (57600 / 8), // 56 Kbps downstream bandwidth
+    Some (14400 / 8)  // 14 Kbps upstream bandwidth
+  ).unwrap();
   println!("...ENet client host created");
 
   // server address

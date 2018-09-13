@@ -11,8 +11,8 @@ pub struct Address {
 
 #[derive(Debug)]
 pub enum AddressError {
-  HostNameResolveFailure(String),
-  CStringNulError(std::ffi::NulError)
+  HostNameResolveFailure (String),
+  CStringNulError        (std::ffi::NulError)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -21,14 +21,14 @@ pub enum AddressError {
 
 impl Address {
   /// Default localhost
-  pub fn new(port : u16) -> Address {
+  pub fn localhost (port : u16) -> Address {
     let host = ll::ENET_HOST_ANY;
     let raw = ll::ENetAddress { host, port };
     Address { raw }
   }
-  pub fn with_hostname(
+  pub fn with_hostname (
     hostname : &str,
-    port : u16
+    port     : u16
   ) -> Result<Address, AddressError> {
     let cname = try!(std::ffi::CString::new(hostname));
     unsafe {
@@ -41,33 +41,32 @@ impl Address {
       })
     }
   }
-
   #[inline]
-  pub fn raw(&self) -> *const ll::ENetAddress {
+  pub fn raw (&self) -> *const ll::ENetAddress {
     &self.raw
   }
   #[inline]
-  pub fn raw_mut(&mut self) -> *mut ll::ENetAddress {
+  pub fn raw_mut (&mut self) -> *mut ll::ENetAddress {
     &mut self.raw
   }
   #[inline]
-  pub fn host(self) -> u32 {
+  pub fn host (self) -> u32 {
     self.raw.host
   }
   #[inline]
-  pub fn port(self) -> u16 {
+  pub fn port (self) -> u16 {
     self.raw.port
   }
 } // end impl Address
 impl Default for Address {
   /// 127.0.0.1:80
   fn default() -> Self {
-    Address::with_hostname ("127.0.0.1", 80).unwrap()
+    Address::localhost (80)
   }
 }
 
-impl From<std::ffi::NulError> for AddressError {
-  fn from(err : std::ffi::NulError) -> AddressError {
-    AddressError::CStringNulError(err)
+impl From <std::ffi::NulError> for AddressError {
+  fn from (err : std::ffi::NulError) -> AddressError {
+    AddressError::CStringNulError (err)
   }
 }
