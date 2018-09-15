@@ -7,16 +7,13 @@ use {packet, Address, EnetDrop, Event, Packet, Peer};
 
 #[derive(Clone, Debug)]
 pub struct Host {
-  hostdrop : std::rc::Rc<HostDrop>
+  hostdrop : std::rc::Rc <HostDrop>
 }
 
-#[derive(Debug)]
-pub struct HostServiceError;
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct HostDrop {
-  raw :      *mut ll::ENetHost,
-  enetdrop : std::sync::Arc<EnetDrop>
+  raw      : *mut ll::ENetHost,
+  enetdrop : std::sync::Arc <EnetDrop>
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -24,15 +21,23 @@ pub struct HostDrop {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
-pub enum HostConnectError {
+pub enum Error {
+  /// Error from `service()`
+  ServiceError,
+  /// Error from `check_events()`
+  DispatchError
+}
+
+#[derive(Debug)]
+pub enum ConnectError {
   NoPeersAvailable,
   /// failure due to internal malloc failure of channel allocation
   Failure
 }
 
 #[derive(Clone, Debug)]
-pub enum HostCreateError {
-  TooManyPeers(u32),
+pub enum CreateError {
+  TooManyPeers (u32),
   ReturnedNull
 }
 
@@ -41,53 +46,53 @@ pub enum HostCreateError {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Host {
-  pub fn new(
-    address : Option<Address>,
-    peer_count : u32,
-    channel_limit : Option<usize>,
-    incoming_bandwidth : Option<u32>,
-    outgoing_bandwidth : Option<u32>,
-    enetdrop : std::sync::Arc<EnetDrop>
-  ) -> Result<Self, HostCreateError> {
+  pub fn new (
+    address            : Option <Address>,
+    peer_count         : u32,
+    channel_limit      : Option <usize>,
+    incoming_bandwidth : Option <u32>,
+    outgoing_bandwidth : Option <u32>,
+    enetdrop           : std::sync::Arc <EnetDrop>
+  ) -> Result <Self, CreateError> {
     if ll::ENET_PROTOCOL_MAXIMUM_PEER_ID < peer_count {
-      return Err(HostCreateError::TooManyPeers(peer_count))
+      return Err (CreateError::TooManyPeers (peer_count))
     }
     let host;
     match address {
-      Some(a) => unsafe {
-        host = ll::enet_host_create(
+      Some (a) => unsafe {
+        host = ll::enet_host_create (
           a.raw(),
           peer_count as usize,
-          channel_limit.unwrap_or(0),
-          incoming_bandwidth.unwrap_or(0),
-          outgoing_bandwidth.unwrap_or(0)
+          channel_limit.unwrap_or      (0),
+          incoming_bandwidth.unwrap_or (0),
+          outgoing_bandwidth.unwrap_or (0)
         );
         if host.is_null() {
-          return Err(HostCreateError::ReturnedNull)
+          return Err (CreateError::ReturnedNull)
         }
       },
       None => unsafe {
-        host = ll::enet_host_create(
+        host = ll::enet_host_create (
           std::ptr::null(),
           peer_count as usize,
-          channel_limit.unwrap_or(0),
-          incoming_bandwidth.unwrap_or(0),
-          outgoing_bandwidth.unwrap_or(0)
+          channel_limit.unwrap_or      (0),
+          incoming_bandwidth.unwrap_or (0),
+          outgoing_bandwidth.unwrap_or (0)
         );
         if host.is_null() {
-          return Err(HostCreateError::ReturnedNull)
+          return Err (CreateError::ReturnedNull)
         }
       }
     } // end match address
-    Ok(Host {
-      hostdrop : std::rc::Rc::new(HostDrop {
-        raw : host,
+    Ok (Host {
+      hostdrop : std::rc::Rc::new (HostDrop {
+        raw: host,
         enetdrop
       })
     })
   } // end new
 
-  pub fn broadcast(&mut self, channel_id : u8, packet : Packet) {
+  pub fn broadcast (&mut self, channel_id : u8, packet : Packet) {
     unsafe {
       let raw;
       match packet {
@@ -106,66 +111,60 @@ impl Host {
           );
         }
       }
-      ll::enet_host_broadcast(self.raw(), channel_id, raw)
+      ll::enet_host_broadcast (self.raw(), channel_id, raw)
     }
   }
 
-  pub fn connect(
-    &mut self,
-    address : &Address,
-    channel_count : u8,
-    data : u32
-  ) -> Result<Peer, HostConnectError> {
+  pub fn connect (&mut self, address : &Address, channel_count : u8, data : u32)
+    -> Result <Peer, ConnectError>
+  {
     unsafe {
       if (*self.raw()).peerCount <= (*self.raw()).connectedPeers {
-        return Err(HostConnectError::NoPeersAvailable)
+        return Err (ConnectError::NoPeersAvailable)
       }
-      let peer = ll::enet_host_connect(
+      let peer = ll::enet_host_connect (
         self.raw(),
         address.raw(),
         channel_count as usize,
         data
       );
       if peer.is_null() {
-        return Err(HostConnectError::Failure)
+        return Err (ConnectError::Failure)
       }
-      Ok(Peer::from_raw(peer, self.hostdrop.clone()))
+      Ok (Peer::from_raw(peer, self.hostdrop.clone()))
     }
   }
 
   #[inline]
-  pub unsafe fn raw(&self) -> *mut ll::ENetHost {
+  pub unsafe fn raw (&self) -> *mut ll::ENetHost {
     self.hostdrop.raw()
   }
 
-  pub fn service(
-    &mut self,
-    timeout : u32
-  ) -> Result<Option<Event>, HostServiceError> {
+  pub fn service (&mut self, timeout : u32) -> Result <Option <Event>, Error> {
     unsafe {
       let mut event = std::mem::uninitialized::<ll::ENetEvent>();
-      if ll::enet_host_service(self.hostdrop.raw, &mut event, timeout) < 0 {
-        return Err(HostServiceError)
+      if ll::enet_host_service (self.hostdrop.raw, &mut event, timeout) < 0 {
+        return Err (Error::ServiceError)
       }
       match event.type_ {
-        ll::_ENetEventType_ENET_EVENT_TYPE_NONE => Ok(None),
-        ll::_ENetEventType_ENET_EVENT_TYPE_CONNECT => {
-          Ok(Some(Event::Connect {
-            peer : Peer::from_raw(event.peer, self.hostdrop.clone()),
-            data : event.data
+        ll::_ENetEventType_ENET_EVENT_TYPE_NONE       => Ok (None),
+        ll::_ENetEventType_ENET_EVENT_TYPE_CONNECT    => {
+          Ok (Some (Event::Connect {
+            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
+            data: event.data
           }))
         }
         ll::_ENetEventType_ENET_EVENT_TYPE_DISCONNECT => {
-          Ok(Some(Event::Disconnect {
-            peer : Peer::from_raw(event.peer, self.hostdrop.clone()),
-            data : event.data
+          Ok (Some (Event::Disconnect {
+            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
+            data: event.data
           }))
         }
-        ll::_ENetEventType_ENET_EVENT_TYPE_RECEIVE => {
-          Ok(Some(Event::Receive {
-            peer :       Peer::from_raw(event.peer, self.hostdrop.clone()),
-            channel_id : event.channelID,
-            packet :     packet::PacketRecv::from_raw(event.packet)
+        ll::_ENetEventType_ENET_EVENT_TYPE_RECEIVE    => {
+          Ok (Some (Event::Receive {
+            peer:       Peer::from_raw (event.peer, self.hostdrop.clone()),
+            channel_id: event.channelID,
+            packet:     packet::PacketRecv::from_raw (event.packet)
           }))
         }
         // TODO: compiler hint ?
@@ -173,17 +172,57 @@ impl Host {
       }
     }
   } // end service
+
+  /// Send any queued messages without dispatching events
+  #[inline]
+  pub fn flush (&mut self) {
+    unsafe { ll::enet_host_flush (self.hostdrop.raw) }
+  }
+
+  #[inline]
+  pub fn check_events (&mut self) -> Result <Option <Event>, Error> {
+    unsafe {
+      let mut event = std::mem::uninitialized::<ll::ENetEvent>();
+      if ll::enet_host_check_events (self.hostdrop.raw, &mut event) < 0 {
+        return Err (Error::DispatchError)
+      }
+      match event.type_ {
+        ll::_ENetEventType_ENET_EVENT_TYPE_NONE       => Ok (None),
+        ll::_ENetEventType_ENET_EVENT_TYPE_CONNECT    => {
+          Ok (Some (Event::Connect {
+            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
+            data: event.data
+          }))
+        }
+        ll::_ENetEventType_ENET_EVENT_TYPE_DISCONNECT => {
+          Ok (Some (Event::Disconnect {
+            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
+            data: event.data
+          }))
+        }
+        ll::_ENetEventType_ENET_EVENT_TYPE_RECEIVE    => {
+          Ok (Some (Event::Receive {
+            peer:       Peer::from_raw (event.peer, self.hostdrop.clone()),
+            channel_id: event.channelID,
+            packet:     packet::PacketRecv::from_raw (event.packet)
+          }))
+        }
+        // TODO: compiler hint ?
+        _ => unreachable!()
+      }
+    }
+  }
 } // end impl Host
 
 impl HostDrop {
   #[inline]
-  pub unsafe fn raw(&self) -> *mut ll::ENetHost {
+  pub unsafe fn raw (&self) -> *mut ll::ENetHost {
     self.raw
   }
 }
 impl Drop for HostDrop {
   #[inline]
-  fn drop(&mut self) {
-    unsafe { ll::enet_host_destroy(self.raw) }
+  fn drop (&mut self) {
+    unsafe { ll::enet_host_destroy (self.raw) }
   }
 }

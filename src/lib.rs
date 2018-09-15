@@ -1,9 +1,9 @@
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate enum_primitive;
+#[macro_use] extern crate bitflags;
+#[macro_use] extern crate enum_primitive;
 
 extern crate enet_sys as ll;
+
+use std::sync::atomic;
 
 pub mod address;
 pub mod host;
@@ -21,14 +21,13 @@ pub use self::version::Version;
 //  typedefs                                                                  //
 ////////////////////////////////////////////////////////////////////////////////
 
-pub type EnetResult<T> = Result<T, Error>;
+pub type EnetResult <T> = Result <T, Error>;
 
 ////////////////////////////////////////////////////////////////////////////////
 //  statics                                                                   //
 ////////////////////////////////////////////////////////////////////////////////
 
-static IS_ENET_CONTEXT_ALIVE : std::sync::atomic::AtomicBool =
-  std::sync::atomic::ATOMIC_BOOL_INIT;
+static IS_ENET_CONTEXT_ALIVE : atomic::AtomicBool = atomic::ATOMIC_BOOL_INIT;
 
 ////////////////////////////////////////////////////////////////////////////////
 //  structs                                                                   //
@@ -36,10 +35,10 @@ static IS_ENET_CONTEXT_ALIVE : std::sync::atomic::AtomicBool =
 
 #[derive(Clone)]
 pub struct Enet {
-  enetdrop : std::sync::Arc<EnetDrop>
+  enetdrop : std::sync::Arc <EnetDrop>
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EnetDrop;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -48,9 +47,9 @@ pub struct EnetDrop;
 
 #[derive(Clone, Debug)]
 pub enum Error {
-  Initialize(String),
-  ServerCreate(host::HostCreateError),
-  ClientCreate(host::HostCreateError)
+  Initialize   (String),
+  ServerCreate (host::CreateError),
+  ClientCreate (host::CreateError)
 }
 
 #[derive(Debug)]
@@ -64,9 +63,9 @@ pub enum Event {
     data : u32
   },
   Receive {
-    peer :       Peer,
+    peer       : Peer,
     channel_id : u8,
-    packet :     packet::PacketRecv
+    packet     : packet::PacketRecv
   }
 }
 
@@ -74,7 +73,7 @@ pub enum Event {
 //  functions                                                                 //
 ////////////////////////////////////////////////////////////////////////////////
 
-pub fn initialize() -> EnetResult<Enet> {
+pub fn initialize() -> EnetResult <Enet> {
   Enet::new()
 }
 
@@ -83,70 +82,68 @@ pub fn initialize() -> EnetResult<Enet> {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Enet {
-  fn new() -> EnetResult<Self> {
+  fn new() -> EnetResult <Self> {
     unsafe {
       let was_alive =
-        IS_ENET_CONTEXT_ALIVE.swap(true, std::sync::atomic::Ordering::Relaxed);
+        IS_ENET_CONTEXT_ALIVE.swap (true, atomic::Ordering::Relaxed);
       if was_alive {
-        return Err(Error::Initialize(
+        return Err (Error::Initialize (
           "`Enet` cannot be initialized more than once".to_owned()
         ))
       }
       if ll::enet_initialize() < 0 {
-        return Err(Error::Initialize(
+        return Err (Error::Initialize(
           "`enet_initialize` returned an error".to_owned()
         ))
       }
-      Ok(Enet {
-        enetdrop : std::sync::Arc::new(EnetDrop)
+      Ok (Enet {
+        enetdrop : std::sync::Arc::new (EnetDrop)
       })
     }
   }
 
-  pub fn client_host_create(
-    &self,
-    peer_count : u32,
-    incoming_bandwidth : Option<u32>,
-    outgoing_bandwidth : Option<u32>
-  ) -> EnetResult<Host> {
-    Ok(try!(
-      Host::new(
+  pub fn client_host_create (&self,
+    peer_count         : u32,
+    incoming_bandwidth : Option <u32>,
+    outgoing_bandwidth : Option <u32>
+  ) -> EnetResult <Host> {
+    Ok (try!(
+      Host::new (
         None,
         peer_count,
         None,
         incoming_bandwidth,
         outgoing_bandwidth,
         self.enetdrop.clone()
-      ).map_err(Error::ClientCreate)
+      ).map_err (Error::ClientCreate)
     ))
   }
 
-  pub fn server_host_create(
-    &self,
-    address : Address,
-    peer_count : u32,
-    channel_limit : Option<usize>,
-    incoming_bandwidth : Option<u32>,
-    outgoing_bandwidth : Option<u32>
-  ) -> EnetResult<Host> {
-    Ok(try!(
+  pub fn server_host_create (&self,
+    address            : Address,
+    peer_count         : u32,
+    channel_limit      : Option <usize>,
+    incoming_bandwidth : Option <u32>,
+    outgoing_bandwidth : Option <u32>
+  ) -> EnetResult <Host> {
+    Ok (try!(
       Host::new(
-        Some(address),
+        Some (address),
         peer_count,
         channel_limit,
         incoming_bandwidth,
         outgoing_bandwidth,
         self.enetdrop.clone()
-      ).map_err(Error::ServerCreate)
+      ).map_err (Error::ServerCreate)
     ))
   }
 }
 
 impl Drop for EnetDrop {
   #[inline]
-  fn drop(&mut self) {
+  fn drop (&mut self) {
     let was_alive =
-      IS_ENET_CONTEXT_ALIVE.swap(false, std::sync::atomic::Ordering::Relaxed);
+      IS_ENET_CONTEXT_ALIVE.swap (false, atomic::Ordering::Relaxed);
     assert!(was_alive);
 
     unsafe { ll::enet_deinitialize() }
@@ -157,7 +154,7 @@ impl Drop for EnetDrop {
 //  tests                                                                     //
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(test)]
+#[cfg (test)]
 mod tests {
   #[test]
   fn it_works() {}

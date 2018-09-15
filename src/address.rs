@@ -20,10 +20,15 @@ pub enum AddressError {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Address {
-  /// Default localhost
+  /// 127.0.0.1
+  #[inline]
   pub fn localhost (port : u16) -> Address {
+    Address::with_hostname ("127.0.0.1", port).unwrap()
+  }
+  /// Creates an address with `ENET_HOST_ANY` (0.0.0.0)
+  pub fn any (port : u16) -> Address {
     let host = ll::ENET_HOST_ANY;
-    let raw = ll::ENetAddress { host, port };
+    let raw  = ll::ENetAddress { host, port };
     Address { raw }
   }
   pub fn with_hostname (

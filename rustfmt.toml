@@ -1,8 +1,0 @@
-max_width = 80
-tab_spaces = 2
-report_fixme = "Never"  #"Always"  # TODO: rustfmt bug
-space_before_colon = true
-struct_field_align_threshold = 24
-trailing_comma = "Never"
-trailing_semicolon = false
-use_field_init_shorthand = true

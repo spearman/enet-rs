@@ -8,11 +8,11 @@ use ll;
 pub enum Packet<'a> {
   Allocate {
     bytes : &'a [u8],
-    flags : PacketFlags
+    flags : Flags
   },
   NoAllocate {
     bytes : &'static [u8],
-    flags : PacketFlags
+    flags : Flags
   }
 }
 
@@ -22,12 +22,12 @@ pub struct PacketRecv {
 }
 
 bitflags! {
-  pub struct PacketFlags : u32 {
+  pub struct Flags : u32 {
     const RELIABLE    = ll::_ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE;
     const UNSEQUENCED = ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED;
     const UNRELIABLE_FRAGMENT =
       ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT;
-    const SENT = ll::_ENetPacketFlag_ENET_PACKET_FLAG_SENT;
+    const SENT        = ll::_ENetPacketFlag_ENET_PACKET_FLAG_SENT;
   }
 }
 
@@ -41,7 +41,6 @@ impl PacketRecv {
     PacketRecv { raw }
   }
 }
-
 impl Drop for PacketRecv {
   #[inline]
   fn drop(&mut self) {

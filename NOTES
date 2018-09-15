@@ -1,105 +1,152 @@
-Connecting hosts
-================
+# Channels
 
-hosts can connect mutually (host A connected to host B, and host B
-connected to host A) or multiply (host A connected to host B more than
-1 time), and each connection will have it's own 'peer' in hosts A and
-B
+A "client" host can communicate bi-directionally on as many channels as a
+"server" host supports.
 
+The following two scenarios demonstrate how the "server" of a new connection
+always determines the number of channels actually used in the connection:
 
-**Channels**
+*Scenario 1*
 
-a "client" host can communicate bi-directionally on as many channels as
-a "server" host supports
+- Host A has 2 channels
+- Host B has 4 channels
 
-SCENARIO 1
+> Host A requests to connect to host B with 6 channels.
 
-host A has 2 channels
-host B has 4 channels
+- This returns a (not-connected) peer with `channelCount` of 6.
+- When the connected event is received by A, the peer `channelCount`
+  will be set to 4.
+- Host B receives the request to connect from host A and the connected A peer
+  will have 4 channels.
 
-host A requests to connect to host B with 6 channels
+> A and B can communicate bi-directionally on 4 channels.
 
-- this returns a (not-connected) peer with channelCount of 6
-- when the connected event is received by A, the peer channelCount
-  will be set to 4
-- host B receives the request to connect from host A the connected A
-  peer will have 4 channels
+*Scenario 2*
 
-==> A and B can communicate bi-directionally on 4 channels
+- Host A has 4 channels
+- Host B has 2 channels
 
+> Host A requests to connect to host B with 6 channels.
 
-SCENARIO 2
+- This returns a (not-connected) B peer with `channelCount` of 6.
+- When the connected event is received by A, the B peer channelCount
+  will be set to 2.
+- Host B receives the request to connect from host A the connected
+  A peer will have 2 channels.
 
-host A has 4 channels
-host B has 2 channels
-
-host A requests to connect to host B with 6 channels
-
-- this returns a (not-connected) B peer with channelCount of 6
-- when the connected event is received by A, the B peer channelCount
-  will be set to 2
-- host B receives the request to connect from host A the connected
-  A peer will have 2 channels
-
-==> A and B can communicate bi-directionally on 2 channels
+> A and B can communicate bi-directionally on 2 channels.
 
 
-Sending Packets
-===============
+# Peers
 
-- int enet_peer_send (peer, channelID, packet):
+## Service events
 
-  no error is generated for a host sending to a peer where the
-  channelID is greater than the host channelLimit; however the
-  function *does* return an error if the channelID exceeds the
-  peer's channelCount
+- `Connect` -- a peer has completed the connection request initiated with
+  `connect()`; the host that initiated the connection needs to call `flush()` or
+  `service()` in order to send the acknowledgement to generate the corresponding
+  `Connect` event on the server end
+- `Disconnect`
+- `Receive`
 
-  errors (return -1):
+## Sending Packets
 
-  * peer->channelCount <= channelID
-  * peer->state != CONNECTED
-  * peer->host.maximumPacketLength < packet.dataLength
+- `int enet_peer_send (peer, channelID, packet)`:
 
-  * either:
-    1. (internal variable) fragmentLength < packet.dataLength, and
-      either:
+    No error is generated for a host sending to a peer where the
+    `channelID` is greater than the host `channelLimit`; however the
+    function *does* return an error if the `channelID` exceeds the
+    peer's `channelCount`
 
-      a. ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT < fragmentCount (internal variable)
+    errors (return -1):
 
-      or
+      * `peer->channelCount <= channelID`
+      * `peer->state != CONNECTED`
+      * `peer->host.maximumPacketLength < packet.dataLength`
 
-      b. outgoing command fragment malloc failure
+      * either:
+            + (internal variable) `fragmentLength < packet.dataLength`, and
+                either:
+                    a. `ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT < fragmentCount`s
+                        (internal variable)
+                or:
+                    b. outgoing command fragment malloc failure
 
-  * or: outgoing command malloc failure
+      * or:
+            + outgoing command malloc failure
 
-the first 3 and a. should be detectable before calling the low-level
-send function, leaving only malloc failure in which case no
-ENetOutgoingCommands will be "queued" (no fragments) or "setup"
-(fragments). i'm assuming at this point the packet will still be
-destroyed automatically (???)
+    The first 3 and (a.) should be detectable before calling the low-level send
+    function, leaving only malloc failure in which case no
+    `ENetOutgoingCommands` will be "queued" (no fragments) or "setup"
+    (fragments). I'm assuming at this point the packet will still be destroyed
+    automatically (???).
 
-- void enet_host_broadcast (host, channelID, packet):
+- `void enet_host_broadcast (host, channelID, packet)`:
 
-  does not check host for host's channelLimit < channelID, but will
-  silently fail when calling enet_peer_send for each connected peer
-  where peer.channelCount <= channelID
+    Does not check host for host's `channelLimit < channelID`, but will
+    silently fail when calling `enet_peer_send` for each connected peer
+    where `peer.channelCount <= channelID`.
 
-  enet_host_broadcast iterates over each *allocated*
-  peer, that is, the peerCount requested when the host was created
-  but will check for connection status and not call send for
-  non-connected peers
+    `enet_host_broadcast` iterates over each *allocated*
+    peer, that is, the peerCount requested when the host was created
+    but will check for connection status and not call send for
+    disconnected peers
 
 
-*Client vs. Server*
+# Design
 
-servers are allowed to connect to eachother, therefore in the
-low-level library a server is not enforced to only accept connections,
-but a client will never accept connections
+Currently we have hosts and peers implemented.
 
-if a host "server" only ever accepts connections, then no packets
-will ever successfuly send or broadcast if host.channelLimit <=
-channelID
+Peers are a kind of 'weak' reference to the peer inside the host structure. When
+a peer or host is dropped, no 'disconnect' messages are sent; eventually the
+remaining server or client will generate a '`Disconnect`' event (about 10
+seconds for a client, about 20 seconds for a server).
 
-for a host "client", a connection with a server can use as many
-channels as the server allows, so host.channelLimit is not used in
-this case
+Outgoing messages can be queued explicitly, e.g. calling `send()` on a peer to
+send a packet, or can be queued implicitly, e.g. when client receives a
+`Connect` event a connection acknowledgement will be queued.
+
+Queued messages are only sent by calling `service()` or `flush()`.
+
+*Q*: should any additional management of connections be attempted?
+
+Currently `Peer` structures are returned by `Connect`, `Receive`, and
+`Disconnect` events. In the case of a `Receive` event, this peer should *not* be
+dropped.
+
+The cases are:
+
+- When `connect()` is called, the returned peer is in the `Connecting` state
+- When a `Peer` is received in a `Connect` event, the peer will be in
+  `Connected` state
+- When a `Peer` is received in a `Receive` event, the peer *should* (???) be
+  in a `Connected` state; i.e. it should only weakly *refer* to a peer that
+  had previously connected
+- When a `Peer` is received in a `Disconnect` event, the peer returned is
+  in `Disconnected` state
+
+Idea: interact only with *peer IDs*. Internally this would require translating
+a pointer to the peer into an index into the peer array.
+
+Issues:
+
+- How to tell if a peer ID has been re-used and now represents a *different*
+  peer?
+      * One idea would be to combine the peer index with a generation number.
+        Each time a `Connect` event is received that refers to a peer, the
+        generation of that peer index is incremented and will no longer send any
+        messages that do not match the new peer generation.
+- What if a peer ID is presented for an operation, e.g. `send()`, which refers
+  to a disconnected peer?
+      * If the above generational approach is taken then there is the additional
+        possibility that a peer ID with a different generation is given to the
+        `send()` command. In either case it should result in some kind of
+        failure, possibly a different error in each case.
+
+For a client, generations may or may not be needed in cases such as a single
+peer that is a server. This would, however, prevent sending messages that were
+intended for a prior session, i.e. if the client had disconnected and
+reconnected.
+
+Note: in the end it might be better not to enforce any kind of policy here. A
+peer is simply a weak reference and it is up to the user to check the state
+before trying operations.
