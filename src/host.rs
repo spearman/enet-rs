@@ -1,5 +1,5 @@
-use {ll, std};
-use {packet, Address, EnetDrop, Event, Packet, Peer};
+use {std, ll};
+use {packet, peer, Address, EnetDrop, Event, Packet, Peer};
 
 ////////////////////////////////////////////////////////////////////////////////
 //  structs                                                                   //
@@ -28,15 +28,9 @@ pub enum Error {
   DispatchError
 }
 
-#[derive(Debug)]
-pub enum ConnectError {
-  NoPeersAvailable,
-  /// failure due to internal malloc failure of channel allocation
-  Failure
-}
-
 #[derive(Clone, Debug)]
 pub enum CreateError {
+  /// Maximum peer count is 4096
   TooManyPeers (u32),
   ReturnedNull
 }
@@ -116,11 +110,11 @@ impl Host {
   }
 
   pub fn connect (&mut self, address : &Address, channel_count : u8, data : u32)
-    -> Result <Peer, ConnectError>
+    -> Result <Peer, peer::ConnectError>
   {
     unsafe {
       if (*self.raw()).peerCount <= (*self.raw()).connectedPeers {
-        return Err (ConnectError::NoPeersAvailable)
+        return Err (peer::ConnectError::NoPeersAvailable)
       }
       let peer = ll::enet_host_connect (
         self.raw(),
@@ -129,7 +123,7 @@ impl Host {
         data
       );
       if peer.is_null() {
-        return Err (ConnectError::Failure)
+        return Err (peer::ConnectError::Failure)
       }
       Ok (Peer::from_raw(peer, self.hostdrop.clone()))
     }
@@ -138,6 +132,12 @@ impl Host {
   #[inline]
   pub unsafe fn raw (&self) -> *mut ll::ENetHost {
     self.hostdrop.raw()
+  }
+
+  /// Send any queued messages without dispatching events
+  #[inline]
+  pub fn flush (&mut self) {
+    unsafe { ll::enet_host_flush (self.hostdrop.raw) }
   }
 
   pub fn service (&mut self, timeout : u32) -> Result <Option <Event>, Error> {
@@ -172,12 +172,6 @@ impl Host {
       }
     }
   } // end service
-
-  /// Send any queued messages without dispatching events
-  #[inline]
-  pub fn flush (&mut self) {
-    unsafe { ll::enet_host_flush (self.hostdrop.raw) }
-  }
 
   #[inline]
   pub fn check_events (&mut self) -> Result <Option <Event>, Error> {

@@ -18,12 +18,6 @@ pub use self::peer::Peer;
 pub use self::version::Version;
 
 ////////////////////////////////////////////////////////////////////////////////
-//  typedefs                                                                  //
-////////////////////////////////////////////////////////////////////////////////
-
-pub type EnetResult <T> = Result <T, Error>;
-
-////////////////////////////////////////////////////////////////////////////////
 //  statics                                                                   //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -73,7 +67,8 @@ pub enum Event {
 //  functions                                                                 //
 ////////////////////////////////////////////////////////////////////////////////
 
-pub fn initialize() -> EnetResult <Enet> {
+#[inline]
+pub fn initialize() -> Result <Enet, Error> {
   Enet::new()
 }
 
@@ -82,23 +77,19 @@ pub fn initialize() -> EnetResult <Enet> {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Enet {
-  fn new() -> EnetResult <Self> {
+  fn new() -> Result <Self, Error> {
     unsafe {
       let was_alive =
         IS_ENET_CONTEXT_ALIVE.swap (true, atomic::Ordering::Relaxed);
       if was_alive {
         return Err (Error::Initialize (
-          "`Enet` cannot be initialized more than once".to_owned()
-        ))
+          "`Enet` cannot be initialized more than once".to_owned()))
       }
       if ll::enet_initialize() < 0 {
         return Err (Error::Initialize(
-          "`enet_initialize` returned an error".to_owned()
-        ))
+          "`enet_initialize` returned an error".to_owned()))
       }
-      Ok (Enet {
-        enetdrop : std::sync::Arc::new (EnetDrop)
-      })
+      Ok (Enet { enetdrop: std::sync::Arc::new (EnetDrop) })
     }
   }
 
@@ -106,7 +97,7 @@ impl Enet {
     peer_count         : u32,
     incoming_bandwidth : Option <u32>,
     outgoing_bandwidth : Option <u32>
-  ) -> EnetResult <Host> {
+  ) -> Result <Host, Error> {
     Ok (try!(
       Host::new (
         None,
@@ -125,7 +116,7 @@ impl Enet {
     channel_limit      : Option <usize>,
     incoming_bandwidth : Option <u32>,
     outgoing_bandwidth : Option <u32>
-  ) -> EnetResult <Host> {
+  ) -> Result <Host, Error> {
     Ok (try!(
       Host::new(
         Some (address),
@@ -137,7 +128,7 @@ impl Enet {
       ).map_err (Error::ServerCreate)
     ))
   }
-}
+} // end impl Enet
 
 impl Drop for EnetDrop {
   #[inline]

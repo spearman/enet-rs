@@ -1,4 +1,4 @@
-use {ll, std};
+use {std, ll};
 
 #[derive(Clone, Debug)]
 pub struct Address {
@@ -37,12 +37,12 @@ impl Address {
   ) -> Result<Address, AddressError> {
     let cname = try!(std::ffi::CString::new(hostname));
     unsafe {
-      let mut address = ll::ENetAddress { host : 0, port : 0 };
+      let mut address = ll::ENetAddress { host: 0, port: 0 };
       if ll::enet_address_set_host(&mut address, cname.as_ptr()) < 0 {
         return Err(AddressError::HostNameResolveFailure(hostname.to_string()))
       }
       Ok(Address {
-        raw : ll::ENetAddress { port, ..address }
+        raw : ll::ENetAddress { port, .. address }
       })
     }
   }

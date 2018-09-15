@@ -66,6 +66,13 @@ enum_from_primitive! {
 }
 
 #[derive(Debug)]
+pub enum ConnectError {
+  NoPeersAvailable,
+  /// failure due to internal malloc failure of channel allocation
+  Failure
+}
+
+#[derive(Debug)]
 pub enum SendError {
   PeerNotConnected (PeerState),
   PeerNoChannelID (u8),
@@ -135,7 +142,7 @@ impl Peer {
         ))
       }
       if (*self.raw).channelCount as u8 <= channel_id {
-        return Err (SendError::PeerNoChannelID(channel_id))
+        return Err (SendError::PeerNoChannelID (channel_id))
       }
       let raw;
       match packet {
