@@ -1,4 +1,4 @@
-use ll;
+use {std, ll};
 
 ////////////////////////////////////////////////////////////////////////////////
 //  structs                                                                   //
@@ -37,13 +37,28 @@ bitflags! {
 
 impl PacketRecv {
   #[inline]
-  pub unsafe fn from_raw(raw : *mut ll::ENetPacket) -> Self {
+  pub unsafe fn from_raw (raw : *mut ll::ENetPacket) -> Self {
     PacketRecv { raw }
+  }
+
+  #[inline]
+  pub fn flags (&self) -> Flags {
+    unsafe {
+      Flags::from_bits ((*self.raw).flags).unwrap()
+    }
+  }
+
+  #[inline]
+  pub fn data (&self) -> &[u8] {
+    unsafe {
+      let len = (*self.raw).dataLength;
+      std::slice::from_raw_parts ((*self.raw).data, len)
+    }
   }
 }
 impl Drop for PacketRecv {
   #[inline]
-  fn drop(&mut self) {
-    unsafe { ll::enet_packet_destroy(self.raw) }
+  fn drop (&mut self) {
+    unsafe { ll::enet_packet_destroy (self.raw) }
   }
 }

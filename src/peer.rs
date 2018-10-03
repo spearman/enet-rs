@@ -106,11 +106,56 @@ impl Peer {
     self.raw
   }
 
+  /// The `incomingPeerID` field represents the index into the local array of
+  /// peers.
+  ///
+  /// Note this is *not* the same as the `connectID` field.
+  #[inline]
+  pub fn incoming_peer_id (&self) -> u16 {
+    unsafe { (*self.raw).incomingPeerID }
+  }
+
   #[inline]
   pub fn state (&self) -> PeerState {
     use enum_primitive::FromPrimitive;
+    unsafe { PeerState::from_u32 ((*self.raw).state).unwrap() }
+  }
+
+  /// Milliseconds
+  #[inline]
+  pub fn round_trip_time (&self) -> u32 {
+    unsafe { (*self.raw).roundTripTime }
+  }
+
+  /// Milliseconds
+  #[inline]
+  pub fn lowest_round_trip_time (&self) -> u32 {
+    unsafe { (*self.raw).lowestRoundTripTime }
+  }
+
+  /// Milliseconds
+  #[inline]
+  pub fn round_trip_time_variance (&self) -> u32 {
+    unsafe { (*self.raw).roundTripTimeVariance }
+  }
+
+  /// Milliseconds
+  #[inline]
+  pub fn highest_round_trip_time_variance (&self) -> u32 {
+    unsafe { (*self.raw).highestRoundTripTimeVariance }
+  }
+
+  /// Milliseconds
+  #[inline]
+  pub fn last_round_trip_time (&self) -> u32 {
+    unsafe { (*self.raw).lastRoundTripTime }
+  }
+
+  /// Milliseconds
+  #[inline]
+  pub fn last_round_trip_time_variance (&self) -> u32 {
     unsafe {
-      PeerState::from_u32 ((*self.raw).state).unwrap()
+      (*self.raw).lastRoundTripTimeVariance
     }
   }
 
@@ -153,7 +198,7 @@ impl Peer {
           if bytes.is_empty() {
             return Err (SendError::PacketCreateZeroLength)
           }
-          raw = ll::enet_packet_create(
+          raw = ll::enet_packet_create (
             bytes.as_ptr() as (*const std::os::raw::c_void),
             bytes.len(),
             flags.bits()
@@ -166,7 +211,7 @@ impl Peer {
           if bytes.is_empty() {
             return Err (SendError::PacketCreateZeroLength)
           }
-          raw = ll::enet_packet_create(
+          raw = ll::enet_packet_create (
             bytes.as_ptr() as (*const std::os::raw::c_void),
             bytes.len(),
             flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE

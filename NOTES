@@ -1,3 +1,10 @@
+ENet Reliable UDP networking library: <http://enet.bespin.org/>
+
+a C# wrapper, for comparison: <https://github.com/nxrighthere/ENet-CSharp>
+
+benchmark of ENet against some other UDP libraries:
+<https://github.com/nxrighthere/BenchmarkNet/wiki/Benchmark-Results>
+
 # Channels
 
 A "client" host can communicate bi-directionally on as many channels as a

@@ -1,6 +1,6 @@
 use {std, ll};
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Address {
   raw : ll::ENetAddress
 }
@@ -67,6 +67,14 @@ impl Default for Address {
   /// 127.0.0.1:80
   fn default() -> Self {
     Address::localhost (80)
+  }
+}
+impl std::fmt::Debug for Address {
+  fn fmt (&self, f : &mut std::fmt::Formatter) -> std::fmt::Result {
+    let host = self.raw.host.to_le_bytes();
+    let port = self.raw.port;
+    write!(f, "Address {{ host: {}.{}.{}.{}, port: {} }}",
+      host[0], host[1], host[2], host[3], port)
   }
 }
 
