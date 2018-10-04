@@ -70,6 +70,9 @@ impl Enet {
   /// Create a host that is intended to only request new connections and not to
   /// listen for incoming connections.
   ///
+  /// The peer count given when creating a host defines the number of
+  /// "connections" to other peers that host may have.
+  ///
   /// Bandwidth parameters determine the "window size" of a connection which
   /// limits the number of reliable packets that may be in transit at any given
   /// time.
@@ -90,6 +93,13 @@ impl Enet {
 
   /// Create a host that is intended to listen for incoming connections (and may
   /// also request new connections with remote hosts).
+  ///
+  /// The peer count given when creating a host defines the number of
+  /// "connections" to other peers that host may have.
+  ///
+  /// Bandwidth parameters determine the "window size" of a connection which
+  /// limits the number of reliable packets that may be in transit at any given
+  /// time.
   pub fn server_host_create (&self,
     address            : Address,
     peer_count         : u32,

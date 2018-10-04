@@ -1,5 +1,5 @@
 use {std, ll};
-use {packet, peer, Address, EnetDrop, Event, Packet, Peer,
+use {peer, Address, EnetDrop, Event, Packet, Peer,
   MAX_PEERS, MAX_CHANNEL_COUNT};
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -188,9 +188,30 @@ impl Host {
 
   /// Initiate a connection with a remote host.
   ///
-  /// The `Peer` will not be in a `Connected` state until a `Connect` event is
-  /// received and an acknowledgement is sent (either with `flush()` or
-  /// `service()`).
+  /// When connecting to a peer with the `host.connect()` method, a `Peer`
+  /// representing the connection will be created in the `PeerState::Connecting`
+  /// state:
+  /// ```
+  /// let mut peer = client.connect (&address::localhost (12345), 2, 0)
+  /// ```
+  /// where the second argument (`2`) is the number of channels to allocate to
+  /// the connection and the third argument (`0`) is an internal `data : u32`
+  /// that can be used by the application.
+  ///
+  /// After receipt of a `Connect` event, the peer is ready to use.
+  ///
+  /// *Note*: after receipt of the `Connect` event on the host that originated
+  /// the connection request, a call to `flush()` or `service()` is required to
+  /// *acknowledge* the connection has succeeded in order to generate the
+  /// corresponding `Connect` event on the server end.
+  ///
+  /// That connection will now be 'in use' until the peer is changed to the
+  /// `PeerState::Disconnected` state.
+  ///
+  /// Note that `Host`s can connect *mutually* (host A connected to host B, and
+  /// host B connected to host A), or *multiply* (host A connected to host B
+  /// more than 1 time), and each connection will have its own `Peer` structure
+  /// in each host A and B.
   pub fn connect (&mut self, address : &Address, channel_count : u8, data : u32)
     -> Result <Peer, peer::ConnectError>
   {
@@ -216,71 +237,27 @@ impl Host {
   ///
   /// `timeout` is the number of milliseconds that ENet should wait for events.
   pub fn service (&mut self, timeout : u32) -> Result <Option <Event>, Error> {
-    unsafe {
+    let event = unsafe {
       let mut event = std::mem::uninitialized::<ll::ENetEvent>();
       if ll::enet_host_service (self.hostdrop.raw, &mut event, timeout) < 0 {
         return Err (Error::ServiceError)
       }
-      match event.type_ {
-        ll::_ENetEventType_ENET_EVENT_TYPE_NONE       => Ok (None),
-        ll::_ENetEventType_ENET_EVENT_TYPE_CONNECT    => {
-          Ok (Some (Event::Connect {
-            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
-            data: event.data
-          }))
-        }
-        ll::_ENetEventType_ENET_EVENT_TYPE_DISCONNECT => {
-          Ok (Some (Event::Disconnect {
-            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
-            data: event.data
-          }))
-        }
-        ll::_ENetEventType_ENET_EVENT_TYPE_RECEIVE    => {
-          Ok (Some (Event::Receive {
-            peer:       Peer::from_raw (event.peer, self.hostdrop.clone()),
-            channel_id: event.channelID,
-            packet:     packet::PacketRecv::from_raw (event.packet)
-          }))
-        }
-        // TODO: compiler hint ?
-        _ => unreachable!()
-      }
-    }
+      event
+    };
+    Ok (Event::from_ll (event, self.hostdrop.clone()))
   } // end service
 
   /// Checks for any queued events on the host and dispatches one if available
   #[inline]
   pub fn check_events (&mut self) -> Result <Option <Event>, Error> {
-    unsafe {
+    let event = unsafe {
       let mut event = std::mem::uninitialized::<ll::ENetEvent>();
       if ll::enet_host_check_events (self.hostdrop.raw, &mut event) < 0 {
         return Err (Error::DispatchError)
       }
-      match event.type_ {
-        ll::_ENetEventType_ENET_EVENT_TYPE_NONE       => Ok (None),
-        ll::_ENetEventType_ENET_EVENT_TYPE_CONNECT    => {
-          Ok (Some (Event::Connect {
-            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
-            data: event.data
-          }))
-        }
-        ll::_ENetEventType_ENET_EVENT_TYPE_DISCONNECT => {
-          Ok (Some (Event::Disconnect {
-            peer: Peer::from_raw (event.peer, self.hostdrop.clone()),
-            data: event.data
-          }))
-        }
-        ll::_ENetEventType_ENET_EVENT_TYPE_RECEIVE    => {
-          Ok (Some (Event::Receive {
-            peer:       Peer::from_raw (event.peer, self.hostdrop.clone()),
-            channel_id: event.channelID,
-            packet:     packet::PacketRecv::from_raw (event.packet)
-          }))
-        }
-        // TODO: compiler hint ?
-        _ => unreachable!()
-      }
-    }
+      event
+    };
+    Ok (Event::from_ll (event, self.hostdrop.clone()))
   }
 
   /// Send any queued messages without dispatching events
