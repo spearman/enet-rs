@@ -1,5 +1,8 @@
 use {std, ll};
-use {host, Packet};
+use {host, Address, Packet};
+
+/// (65536)
+pub const PACKET_LOSS_SCALE : u32 = ll::ENET_PEER_PACKET_LOSS_SCALE;
 
 ////////////////////////////////////////////////////////////////////////////////
 //  structs                                                                   //
@@ -7,11 +10,11 @@ use {host, Packet};
 
 /// A type representing a connection to an ENet peer (client or server).
 ///
-/// The first available peer (with `PeerState::Disconnected`) is returned when
+/// The first available peer (with `State::Disconnected`) is returned when
 /// *connecting* to a remote server host:
 ///
 /// ```text
-/// let mut peer = host.connect (CHANNELS, DATA);
+/// let mut peer = host.connect (channels, data);
 /// ```
 ///
 /// Note that the peer will be able to communicate on at least as many channels
@@ -22,7 +25,7 @@ use {host, Packet};
 /// send messages:
 ///
 /// ```text
-/// peer.send (CHANNEL, packet);
+/// peer.send (channel, packet);
 /// ```
 ///
 /// On the receiving end of the endpoint, each time an `Event` is received, a
@@ -41,7 +44,7 @@ pub struct Peer {
 
 enum_from_primitive! {
   #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-  pub enum PeerState {
+  pub enum State {
     Disconnected         = ll::_ENetPeerState_ENET_PEER_STATE_DISCONNECTED
       as isize,
     Connecting           = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTING
@@ -74,7 +77,7 @@ pub enum ConnectError {
 
 #[derive(Debug)]
 pub enum SendError {
-  PeerNotConnected (PeerState),
+  PeerNotConnected (State),
   PeerNoChannelID (u8),
   PacketCreateZeroLength,
   /// packet creation failed due to internal malloc call failing
@@ -91,7 +94,7 @@ pub enum SendError {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Peer {
-  pub unsafe fn from_raw (
+  pub (crate) unsafe fn from_raw (
     peer     : *mut ll::ENetPeer,
     hostdrop : std::rc::Rc <host::HostDrop>
   ) -> Self {
@@ -116,9 +119,38 @@ impl Peer {
   }
 
   #[inline]
-  pub fn state (&self) -> PeerState {
+  pub fn state (&self) -> State {
     use enum_primitive::FromPrimitive;
-    unsafe { PeerState::from_u32 ((*self.raw).state).unwrap() }
+    unsafe { State::from_u32 ((*self.raw).state).unwrap() }
+  }
+
+  #[inline]
+  pub fn address (&self) -> Address {
+    unsafe { Address::from_ll ((*self.raw).address) }
+  }
+
+  #[inline]
+  pub fn packet_loss_epoch (&self) -> u32 {
+    unsafe { (*self.raw).packetLossEpoch }
+  }
+
+  /// Packets sent during the current "packet loss epoch"
+  #[inline]
+  pub fn packets_sent (&self) -> u32 {
+    unsafe { (*self.raw).packetsSent }
+  }
+
+  /// Packets lost during the current "packet loss epoch"
+  #[inline]
+  pub fn packets_lost (&self) -> u32 {
+    unsafe { (*self.raw).packetsLost }
+  }
+
+  /// Mean packet loss of reliable packets as a ratio with respect to
+  /// `PACKET_LOSS_SCALE`
+  #[inline]
+  pub fn packet_loss (&self) -> u32 {
+    unsafe { (*self.raw).packetLoss }
   }
 
   /// Milliseconds
@@ -129,14 +161,16 @@ impl Peer {
 
   /// Milliseconds
   #[inline]
-  pub fn lowest_round_trip_time (&self) -> u32 {
-    unsafe { (*self.raw).lowestRoundTripTime }
-  }
-
-  /// Milliseconds
-  #[inline]
   pub fn round_trip_time_variance (&self) -> u32 {
     unsafe { (*self.raw).roundTripTimeVariance }
+  }
+
+  // TODO: expose the following round trip time values ?
+  /*
+  /// Milliseconds
+  #[inline]
+  pub fn lowest_round_trip_time (&self) -> u32 {
+    unsafe { (*self.raw).lowestRoundTripTime }
   }
 
   /// Milliseconds
@@ -158,21 +192,48 @@ impl Peer {
       (*self.raw).lastRoundTripTimeVariance
     }
   }
+  */
 
   #[inline]
-  pub fn disconnect (&self) {
+  pub fn ping (&mut self) {
     unsafe {
-      ll::enet_peer_disconnect (self.raw(), 0)
+      ll::enet_peer_ping (self.raw())
     }
   }
 
-  /// Forcibly disconnect without notifying peer.
-  ///
-  /// For the peer, eventually the connection will time out.
   #[inline]
-  pub fn reset (&self) {
+  pub fn get_ping_interval (&mut self) -> u32 {
     unsafe {
-      ll::enet_peer_reset (self.raw())
+      (*self.raw).pingInterval
+    }
+  }
+
+  /// Set the interval at which pings will be sent to a peer
+  #[inline]
+  pub fn ping_interval (&mut self, ping_interval : u32) {
+    unsafe {
+      ll::enet_peer_ping_interval (self.raw(), ping_interval)
+    }
+  }
+
+  /// Set the timeout parameters for a peer
+  #[inline]
+  pub fn timeout (&mut self,
+    timeout_limit : u32, timeout_minimum : u32, timeout_maximum : u32
+  ) {
+    unsafe {
+      ll::enet_peer_timeout (self.raw(),
+        timeout_limit, timeout_minimum, timeout_maximum)
+    }
+  }
+
+  /// (timeoutLimit, timeoutMinimum, timeoutMaximum)
+  #[inline]
+  pub fn get_timeout (&mut self) -> (u32, u32, u32) {
+    unsafe {
+      ( (*self.raw).timeoutLimit,
+        (*self.raw).timeoutMinimum,
+        (*self.raw).timeoutMaximum )
     }
   }
 
@@ -183,7 +244,7 @@ impl Peer {
     unsafe {
       if (*self.raw).state != ll::_ENetPeerState_ENET_PEER_STATE_CONNECTED {
         return Err (SendError::PeerNotConnected(
-          PeerState::from_u32 ((*self.raw).state).unwrap()
+          State::from_u32 ((*self.raw).state).unwrap()
         ))
       }
       if (*self.raw).channelCount as u8 <= channel_id {
@@ -228,4 +289,44 @@ impl Peer {
       Ok(())
     }
   } // end send
+
+  // TODO: expose data parameter in the following ?
+
+  /// Request a disconnection.
+  ///
+  /// Note this may be sent before queued outgoing packets; use
+  /// `disconnect_later` to ensure they are sent before disconnecting.
+  #[inline]
+  pub fn disconnect (&self) {
+    unsafe {
+      ll::enet_peer_disconnect (self.raw(), 0)
+    }
+  }
+
+  /// Force immediate disconnection
+  #[inline]
+  pub fn disconnect_now (&self) {
+    unsafe {
+      ll::enet_peer_disconnect_now (self.raw(), 0)
+    }
+  }
+
+  /// Request disconnection after all queued outgoing packets are sent
+  #[inline]
+  pub fn disconnect_later (&self) {
+    unsafe {
+      ll::enet_peer_disconnect_later (self.raw(), 0)
+    }
+  }
+
+  /// Forcibly disconnect without notifying peer.
+  ///
+  /// For the remote peer, eventually the connection will time out.
+  #[inline]
+  pub fn reset (&self) {
+    unsafe {
+      ll::enet_peer_reset (self.raw())
+    }
+  }
+
 } // end impl Peer

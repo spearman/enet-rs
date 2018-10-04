@@ -1,9 +1,9 @@
 [package]
 name = "enet"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Shane Pearman <spearman@github.com>"]
 license = "Apache-2.0"
-description = "Rust interface for the ENet UDP networking library"
+description = "Rust interface for the ENet reliable UDP library"
 repository = "https://github.com/spearman/enet-rs"
 readme = "README.md"
 

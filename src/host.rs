@@ -1,17 +1,21 @@
 use {std, ll};
-use {packet, peer, Address, EnetDrop, Event, Packet, Peer};
+use {packet, peer, Address, EnetDrop, Event, Packet, Peer,
+  MAX_PEERS, MAX_CHANNEL_COUNT};
 
 ////////////////////////////////////////////////////////////////////////////////
 //  structs                                                                   //
 ////////////////////////////////////////////////////////////////////////////////
 
+/// An ENet host for communicating with peers.
+///
+/// A 'Host' cannot be sent accross threads but will keep Enet 
 #[derive(Clone, Debug)]
 pub struct Host {
   hostdrop : std::rc::Rc <HostDrop>
 }
 
 #[derive(Debug, PartialEq)]
-pub struct HostDrop {
+pub (crate) struct HostDrop {
   raw      : *mut ll::ENetHost,
   enetdrop : std::sync::Arc <EnetDrop>
 }
@@ -30,8 +34,10 @@ pub enum Error {
 
 #[derive(Clone, Debug)]
 pub enum CreateError {
-  /// Maximum peer count is 4096
-  TooManyPeers (u32),
+  /// Maximum peer count is enet::MAX_PEERS (4096)
+  TooManyPeers    (u32),
+  /// Maximum channel count is enet::MAX_CHANNEL_COUNT (255)
+  TooManyChannels (u32),
   ReturnedNull
 }
 
@@ -40,24 +46,28 @@ pub enum CreateError {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Host {
-  pub fn new (
+  pub (crate) fn new (
     address            : Option <Address>,
     peer_count         : u32,
-    channel_limit      : Option <usize>,
+    channel_limit      : Option <u32>,
     incoming_bandwidth : Option <u32>,
     outgoing_bandwidth : Option <u32>,
     enetdrop           : std::sync::Arc <EnetDrop>
   ) -> Result <Self, CreateError> {
-    if ll::ENET_PROTOCOL_MAXIMUM_PEER_ID < peer_count {
+    if MAX_PEERS < peer_count {
       return Err (CreateError::TooManyPeers (peer_count))
+    }
+    let channel_limit = channel_limit.unwrap_or (0);
+    if MAX_CHANNEL_COUNT < channel_limit {
+      return Err (CreateError::TooManyChannels (channel_limit))
     }
     let host;
     match address {
       Some (a) => unsafe {
         host = ll::enet_host_create (
           a.raw(),
-          peer_count as usize,
-          channel_limit.unwrap_or      (0),
+          peer_count    as usize,
+          channel_limit as usize,
           incoming_bandwidth.unwrap_or (0),
           outgoing_bandwidth.unwrap_or (0)
         );
@@ -68,8 +78,8 @@ impl Host {
       None => unsafe {
         host = ll::enet_host_create (
           std::ptr::null(),
-          peer_count as usize,
-          channel_limit.unwrap_or      (0),
+          peer_count    as usize,
+          channel_limit as usize,
           incoming_bandwidth.unwrap_or (0),
           outgoing_bandwidth.unwrap_or (0)
         );
@@ -79,41 +89,113 @@ impl Host {
       }
     } // end match address
     Ok (Host {
-      hostdrop : std::rc::Rc::new (HostDrop {
+      hostdrop: std::rc::Rc::new (HostDrop {
         raw: host,
         enetdrop
       })
     })
   } // end new
 
-  pub fn broadcast (&mut self, channel_id : u8, packet : Packet) {
+  #[inline]
+  pub unsafe fn raw (&self) -> *mut ll::ENetHost {
+    self.hostdrop.raw()
+  }
+
+  /// Number of peers allocated for this host
+  #[inline]
+  pub fn peer_count (&self) -> usize {
     unsafe {
-      let raw;
-      match packet {
-        Packet::Allocate { bytes, flags } => {
-          raw = ll::enet_packet_create (
-            bytes.as_ptr() as (*const std::os::raw::c_void),
-            bytes.len(),
-            flags.bits()
-          );
-        }
-        Packet::NoAllocate { bytes, flags } => {
-          raw = ll::enet_packet_create (
-            bytes.as_ptr() as (*const std::os::raw::c_void),
-            bytes.len(),
-            flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE
-          );
-        }
-      }
-      ll::enet_host_broadcast (self.raw(), channel_id, raw)
+      (*self.raw()).peerCount
     }
   }
 
+  /// Number of connected peers
+  #[inline]
+  pub fn connected_peers (&self) -> usize {
+    unsafe {
+      (*self.raw()).connectedPeers
+    }
+  }
+
+  /// Maximum number of channels for incoming connections
+  #[inline]
+  pub fn channel_limit (&self) -> usize {
+    unsafe {
+      (*self.raw()).channelLimit
+    }
+  }
+
+  /// Total UDP packets sent.
+  ///
+  /// User must reset to prevent overflow.
+  #[inline]
+  pub fn total_sent_packets (&self) -> u32 {
+    unsafe {
+      (*self.raw()).totalSentPackets
+    }
+  }
+  pub fn reset_total_sent_packets (&mut self) {
+    unsafe {
+      (*self.raw()).totalSentPackets = 0;
+    }
+  }
+
+  /// Total bytes sent.
+  ///
+  /// User must reset to prevent overflow.
+  #[inline]
+  pub fn total_sent_data (&self) -> u32 {
+    unsafe {
+      (*self.raw()).totalSentPackets
+    }
+  }
+  pub fn reset_total_sent_data (&mut self) {
+    unsafe {
+      (*self.raw()).totalSentData = 0;
+    }
+  }
+
+  /// Total UDP packets received.
+  ///
+  /// User must reset to prevent overflow.
+  #[inline]
+  pub fn total_received_packets (&self) -> u32 {
+    unsafe {
+      (*self.raw()).totalReceivedPackets
+    }
+  }
+  pub fn reset_total_received_packets (&mut self) {
+    unsafe {
+      (*self.raw()).totalReceivedPackets = 0;
+    }
+  }
+
+  /// Total bytes received.
+  ///
+  /// User must reset to prevent overflow.
+  #[inline]
+  pub fn total_received_data (&self) -> u32 {
+    unsafe {
+      (*self.raw()).totalReceivedPackets
+    }
+  }
+  pub fn reset_total_received_data (&mut self) {
+    unsafe {
+      (*self.raw()).totalReceivedData = 0;
+    }
+  }
+
+
+  /// Initiate a connection with a remote host.
+  ///
+  /// The `Peer` will not be in a `Connected` state until a `Connect` event is
+  /// received and an acknowledgement is sent (either with `flush()` or
+  /// `service()`).
   pub fn connect (&mut self, address : &Address, channel_count : u8, data : u32)
     -> Result <Peer, peer::ConnectError>
   {
     unsafe {
-      if (*self.raw()).peerCount <= (*self.raw()).connectedPeers {
+      if self.peer_count() <= self.connected_peers() {
         return Err (peer::ConnectError::NoPeersAvailable)
       }
       let peer = ll::enet_host_connect (
@@ -129,17 +211,10 @@ impl Host {
     }
   }
 
-  #[inline]
-  pub unsafe fn raw (&self) -> *mut ll::ENetHost {
-    self.hostdrop.raw()
-  }
-
-  /// Send any queued messages without dispatching events
-  #[inline]
-  pub fn flush (&mut self) {
-    unsafe { ll::enet_host_flush (self.hostdrop.raw) }
-  }
-
+  /// Waits for events on the host specified and shuttles packets between the
+  /// host and its peers.
+  ///
+  /// `timeout` is the number of milliseconds that ENet should wait for events.
   pub fn service (&mut self, timeout : u32) -> Result <Option <Event>, Error> {
     unsafe {
       let mut event = std::mem::uninitialized::<ll::ENetEvent>();
@@ -173,6 +248,7 @@ impl Host {
     }
   } // end service
 
+  /// Checks for any queued events on the host and dispatches one if available
   #[inline]
   pub fn check_events (&mut self) -> Result <Option <Event>, Error> {
     unsafe {
@@ -206,6 +282,37 @@ impl Host {
       }
     }
   }
+
+  /// Send any queued messages without dispatching events
+  #[inline]
+  pub fn flush (&mut self) {
+    unsafe { ll::enet_host_flush (self.hostdrop.raw) }
+  }
+
+  /// Queue a packet to be sent to all peers associated with the host
+  pub fn broadcast (&mut self, channel_id : u8, packet : Packet) {
+    unsafe {
+      let raw;
+      match packet {
+        Packet::Allocate { bytes, flags } => {
+          raw = ll::enet_packet_create (
+            bytes.as_ptr() as (*const std::os::raw::c_void),
+            bytes.len(),
+            flags.bits()
+          );
+        }
+        Packet::NoAllocate { bytes, flags } => {
+          raw = ll::enet_packet_create (
+            bytes.as_ptr() as (*const std::os::raw::c_void),
+            bytes.len(),
+            flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE
+          );
+        }
+      }
+      ll::enet_host_broadcast (self.raw(), channel_id, raw)
+    }
+  }
+
 } // end impl Host
 
 impl HostDrop {

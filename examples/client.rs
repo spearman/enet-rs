@@ -27,7 +27,7 @@ fn main() {
 
 
   println!("initializing ENet...");
-  show!(version::linked_version());
+  show!(enet::linked_version());
   let enet = enet::initialize().unwrap();
   println!("...ENet initialized");
   println!("creating ENet client host...");

@@ -1,6 +1,6 @@
 # `enet`
 
-> Rust interface for the [ENet UDP networking library](http://enet.bespin.org/)
+> Rust interface for the [ENet reliable UDP library](http://enet.bespin.org/)
 
 ## Usage
 
@@ -36,11 +36,11 @@ to other peers that host may have.
 
 *Client vs. Server*
 
-Servers are allowed to connect to eachother; therefore in the low-level library
-a server is not restricted to only accepting connections, but a client will
-*never* accept connections.
+"Servers" can both accept incoming connections and request outgoing connections,
+while a "client" will not listen for incoming connections.
 
-If a "server" host only ever accepts connections, then no packets will ever
+The server host determines the channels which are available for connections. If
+a server host only ever accepts connections, then no packets will ever
 successfuly send or broadcast if sent with `channelID >= host.channelLimit`,
 since the recipient of a connection request (the server) determines the maximum
 channel ID.

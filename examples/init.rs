@@ -3,10 +3,8 @@
 extern crate enet;
 use enet::address;
 
-use enet::version::linked_version;
-
 fn main() {
-  println!("linked version: {}", linked_version());
+  println!("linked version: {}", enet::linked_version());
 
   println!("initializing ENet...");
   let enet = enet::initialize().unwrap();
