@@ -2,7 +2,7 @@ use {std, ll};
 use {host, Address, Packet};
 
 /// (65536)
-pub const PACKET_LOSS_SCALE : u32 = ll::ENET_PEER_PACKET_LOSS_SCALE;
+pub const PACKET_LOSS_SCALE : u32 = ll::ENET_PEER_PACKET_LOSS_SCALE as u32;
 
 ////////////////////////////////////////////////////////////////////////////////
 //  structs                                                                   //
@@ -121,7 +121,7 @@ impl Peer {
   #[inline]
   pub fn state (&self) -> State {
     use enum_primitive::FromPrimitive;
-    unsafe { State::from_u32 ((*self.raw).state).unwrap() }
+    unsafe { State::from_u32 ((*self.raw).state as u32).unwrap() }
   }
 
   #[inline]
@@ -244,7 +244,7 @@ impl Peer {
     unsafe {
       if (*self.raw).state != ll::_ENetPeerState_ENET_PEER_STATE_CONNECTED {
         return Err (SendError::PeerNotConnected(
-          State::from_u32 ((*self.raw).state).unwrap()
+          State::from_u32 ((*self.raw).state as u32).unwrap()
         ))
       }
       if (*self.raw).channelCount as u8 <= channel_id {

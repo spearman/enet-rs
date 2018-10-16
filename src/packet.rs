@@ -29,15 +29,15 @@ bitflags! {
   /// `Flags::empty()` indicates unreliable, sequenced delivery.
   pub struct Flags : u32 {
     /// Reliable, sequenced delivery
-    const RELIABLE    = ll::_ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE;
+    const RELIABLE    = ll::_ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32;
     /// Unsequenced delivery
-    const UNSEQUENCED = ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED;
+    const UNSEQUENCED = ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32;
     /// Packet will be fragmented if it exceeds the MTU
     const UNRELIABLE_FRAGMENT =
-      ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT;
+      ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT as u32;
     /// Packet will not allocate data and user must supply it instead
     const NO_ALLOCATE =
-      ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE;
+      ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32;
     // TODO: choose to expose the packet sent flag?
     // Whether the packet has been sent from all queues it has been entered
     // into.

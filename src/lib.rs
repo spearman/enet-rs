@@ -24,9 +24,9 @@ pub use self::peer::Peer;
 pub use self::version::Version;
 
 /// (4096)
-pub const MAX_PEERS         : u32 = ll::ENET_PROTOCOL_MAXIMUM_PEER_ID;
+pub const MAX_PEERS         : u32 = ll::ENET_PROTOCOL_MAXIMUM_PEER_ID as u32;
 /// (255)
-pub const MAX_CHANNEL_COUNT : u32 = ll::ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT;
+pub const MAX_CHANNEL_COUNT : u32 = ll::ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT as u32;
 
 static ENET_CONTEXT_ALIVE : atomic::AtomicBool = atomic::ATOMIC_BOOL_INIT;
 

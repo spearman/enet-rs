@@ -282,7 +282,7 @@ impl Host {
           raw = ll::enet_packet_create (
             bytes.as_ptr() as (*const std::os::raw::c_void),
             bytes.len(),
-            flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE
+            flags.bits() | (ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32)
           );
         }
       }
