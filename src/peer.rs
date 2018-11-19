@@ -99,7 +99,7 @@ impl Peer {
     hostdrop : std::rc::Rc <host::HostDrop>
   ) -> Self {
     Peer {
-      raw : peer,
+      raw: peer,
       hostdrop
     }
   }
