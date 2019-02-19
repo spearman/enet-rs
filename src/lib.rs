@@ -1,7 +1,5 @@
 //! Rust interface for the [ENet reliable UDP library](http://enet.bespin.org/)
 
-#![feature(int_to_from_bytes)]
-
 #[macro_use] extern crate bitflags;
 #[macro_use] extern crate enum_primitive;
 
