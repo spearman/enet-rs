@@ -26,7 +26,7 @@ pub const MAX_PEERS         : u32 = ll::ENET_PROTOCOL_MAXIMUM_PEER_ID;
 /// (255)
 pub const MAX_CHANNEL_COUNT : u32 = ll::ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT;
 
-static ENET_CONTEXT_ALIVE : atomic::AtomicBool = atomic::ATOMIC_BOOL_INIT;
+static ENET_CONTEXT_ALIVE : atomic::AtomicBool = atomic::AtomicBool::new (false);
 
 /// The initialized ENet context.
 ///
