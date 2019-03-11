@@ -25,7 +25,6 @@ fn main() {
     running_clone.store (false, atomic::Ordering::SeqCst)
   }).unwrap();
 
-
   println!("initializing ENet...");
   show!(enet::linked_version());
   let enet = enet::initialize().unwrap();

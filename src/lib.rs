@@ -1,7 +1,5 @@
 //! Rust interface for the [ENet reliable UDP library](http://enet.bespin.org/)
 
-#![feature(int_to_from_bytes)]
-
 #[macro_use] extern crate bitflags;
 #[macro_use] extern crate enum_primitive;
 
@@ -28,7 +26,7 @@ pub const MAX_PEERS         : u32 = ll::ENET_PROTOCOL_MAXIMUM_PEER_ID as u32;
 /// (255)
 pub const MAX_CHANNEL_COUNT : u32 = ll::ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT as u32;
 
-static ENET_CONTEXT_ALIVE : atomic::AtomicBool = atomic::ATOMIC_BOOL_INIT;
+static ENET_CONTEXT_ALIVE : atomic::AtomicBool = atomic::AtomicBool::new (false);
 
 /// The initialized ENet context.
 ///
