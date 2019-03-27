@@ -10,7 +10,7 @@ readme = "README.md"
 [dependencies]
 bitflags = "1.*"
 enum_primitive = "0.1.*"
-enet-sys = { version = "0.2.*", git = "git://github.com/spearman/enet-sys.git", branch = "windows-build" }
+enet-sys = "0.2.*"
 
 [dev-dependencies]
 ctrlc = "3.*"
