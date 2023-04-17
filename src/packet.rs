@@ -27,6 +27,7 @@ bitflags! {
   /// Flags for outgoing packets.
   ///
   /// `Flags::empty()` indicates unreliable, sequenced delivery.
+  #[derive(Clone, Copy, Debug)]
   pub struct Flags : u32 {
     /// Reliable, sequenced delivery
     const RELIABLE    = ll::_ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32;
@@ -63,7 +64,7 @@ impl PacketRecv {
   }
 
   #[inline]
-  pub fn data_length (&self) -> usize {
+  pub fn data_length (&self) -> u64 {
     unsafe {
       (*self.raw).dataLength
     }
@@ -72,7 +73,7 @@ impl PacketRecv {
   #[inline]
   pub fn data (&self) -> &[u8] {
     unsafe {
-      let len = (*self.raw).dataLength;
+      let len = (*self.raw).dataLength as usize;
       std::slice::from_raw_parts ((*self.raw).data, len)
     }
   }

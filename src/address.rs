@@ -38,7 +38,7 @@ impl Address {
     hostname : &str,
     port     : u16
   ) -> Result<Address, AddressError> {
-    let cname = try!(std::ffi::CString::new(hostname));
+    let cname = std::ffi::CString::new(hostname)?;
     unsafe {
       let address = {
         let mut address = ll::ENetAddress { host: 0, port: 0 };

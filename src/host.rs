@@ -66,8 +66,8 @@ impl Host {
       Some (a) => unsafe {
         host = ll::enet_host_create (
           a.raw(),
-          peer_count    as usize,
-          channel_limit as usize,
+          peer_count    as u64,
+          channel_limit as u64,
           incoming_bandwidth.unwrap_or (0),
           outgoing_bandwidth.unwrap_or (0)
         );
@@ -78,8 +78,8 @@ impl Host {
       None => unsafe {
         host = ll::enet_host_create (
           std::ptr::null(),
-          peer_count    as usize,
-          channel_limit as usize,
+          peer_count    as u64,
+          channel_limit as u64,
           incoming_bandwidth.unwrap_or (0),
           outgoing_bandwidth.unwrap_or (0)
         );
@@ -103,7 +103,7 @@ impl Host {
 
   /// Number of peers allocated for this host
   #[inline]
-  pub fn peer_count (&self) -> usize {
+  pub fn peer_count (&self) -> u64 {
     unsafe {
       (*self.raw()).peerCount
     }
@@ -111,7 +111,7 @@ impl Host {
 
   /// Number of connected peers
   #[inline]
-  pub fn connected_peers (&self) -> usize {
+  pub fn connected_peers (&self) -> u64 {
     unsafe {
       (*self.raw()).connectedPeers
     }
@@ -119,7 +119,7 @@ impl Host {
 
   /// Maximum number of channels for incoming connections
   #[inline]
-  pub fn channel_limit (&self) -> usize {
+  pub fn channel_limit (&self) -> u64 {
     unsafe {
       (*self.raw()).channelLimit
     }
@@ -222,7 +222,7 @@ impl Host {
       let peer = ll::enet_host_connect (
         self.raw(),
         address.raw(),
-        channel_count as usize,
+        channel_count as u64,
         data
       );
       if peer.is_null() {
@@ -238,11 +238,11 @@ impl Host {
   /// `timeout` is the number of milliseconds that ENet should wait for events.
   pub fn service (&mut self, timeout : u32) -> Result <Option <Event>, Error> {
     let event = unsafe {
-      let mut event = std::mem::uninitialized::<ll::ENetEvent>();
-      if ll::enet_host_service (self.hostdrop.raw, &mut event, timeout) < 0 {
+      let event = std::mem::MaybeUninit::<ll::ENetEvent>::uninit().as_mut_ptr();
+      if ll::enet_host_service (self.hostdrop.raw, event, timeout) < 0 {
         return Err (Error::ServiceError)
       }
-      event
+      *event
     };
     Ok (Event::from_ll (event, self.hostdrop.clone()))
   } // end service
@@ -251,11 +251,11 @@ impl Host {
   #[inline]
   pub fn check_events (&mut self) -> Result <Option <Event>, Error> {
     let event = unsafe {
-      let mut event = std::mem::uninitialized::<ll::ENetEvent>();
-      if ll::enet_host_check_events (self.hostdrop.raw, &mut event) < 0 {
+      let event = std::mem::MaybeUninit::<ll::ENetEvent>::uninit().as_mut_ptr();
+      if ll::enet_host_check_events (self.hostdrop.raw, event) < 0 {
         return Err (Error::DispatchError)
       }
-      event
+      *event
     };
     Ok (Event::from_ll (event, self.hostdrop.clone()))
   }
@@ -273,15 +273,15 @@ impl Host {
       match packet {
         Packet::Allocate { bytes, flags } => {
           raw = ll::enet_packet_create (
-            bytes.as_ptr() as (*const std::os::raw::c_void),
-            bytes.len(),
+            bytes.as_ptr() as *const std::os::raw::c_void,
+            bytes.len() as u64,
             flags.bits()
           );
         }
         Packet::NoAllocate { bytes, flags } => {
           raw = ll::enet_packet_create (
-            bytes.as_ptr() as (*const std::os::raw::c_void),
-            bytes.len(),
+            bytes.as_ptr() as *const std::os::raw::c_void,
+            bytes.len() as u64,
             flags.bits() | (ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32)
           );
         }

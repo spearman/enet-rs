@@ -253,28 +253,28 @@ impl Peer {
       let raw;
       match packet {
         Packet::Allocate { bytes, flags } => {
-          if (*self.hostdrop.raw()).maximumPacketSize < bytes.len() {
+          if (*self.hostdrop.raw()).maximumPacketSize < bytes.len() as u64 {
             return Err (SendError::PacketExceedsMaximumSize (bytes.len()))
           }
           if bytes.is_empty() {
             return Err (SendError::PacketCreateZeroLength)
           }
           raw = ll::enet_packet_create (
-            bytes.as_ptr() as (*const std::os::raw::c_void),
-            bytes.len(),
+            bytes.as_ptr() as *const std::os::raw::c_void,
+            bytes.len() as u64,
             flags.bits()
           );
         }
         Packet::NoAllocate { bytes, flags } => {
-          if (*(*self.raw).host).maximumPacketSize < bytes.len() {
+          if (*(*self.raw).host).maximumPacketSize < bytes.len() as u64 {
             return Err (SendError::PacketExceedsMaximumSize(bytes.len()))
           }
           if bytes.is_empty() {
             return Err (SendError::PacketCreateZeroLength)
           }
           raw = ll::enet_packet_create (
-            bytes.as_ptr() as (*const std::os::raw::c_void),
-            bytes.len(),
+            bytes.as_ptr() as *const std::os::raw::c_void,
+            bytes.len() as u64,
             flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE
               as u32
           );
