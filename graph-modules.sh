@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -x
 
 cargo modules graph > modules.dot && dot -Tpng modules.dot > modules.png \
