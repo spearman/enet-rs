@@ -192,7 +192,10 @@ impl Host {
   /// representing the connection will be created in the `PeerState::Connecting`
   /// state:
   /// ```
-  /// let mut peer = client.connect (&address::localhost (12345), 2, 0)
+  /// # use enet::Address;
+  /// # let enet = enet::initialize().unwrap();
+  /// # let mut client = enet.client_host_create (1, None, None).unwrap();
+  /// let mut peer = client.connect (&Address::localhost (12345), 2, 0);
   /// ```
   /// where the second argument (`2`) is the number of channels to allocate to
   /// the connection and the third argument (`0`) is an internal `data : u32`
