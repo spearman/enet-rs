@@ -64,7 +64,7 @@ impl PacketRecv {
   }
 
   #[inline]
-  pub fn data_length (&self) -> u64 {
+  pub fn data_length (&self) -> usize {
     unsafe {
       (*self.raw).dataLength
     }

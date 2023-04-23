@@ -66,8 +66,8 @@ impl Host {
       Some (a) => unsafe {
         host = ll::enet_host_create (
           a.raw(),
-          peer_count    as u64,
-          channel_limit as u64,
+          peer_count    as usize,
+          channel_limit as usize,
           incoming_bandwidth.unwrap_or (0),
           outgoing_bandwidth.unwrap_or (0)
         );
@@ -78,8 +78,8 @@ impl Host {
       None => unsafe {
         host = ll::enet_host_create (
           std::ptr::null(),
-          peer_count    as u64,
-          channel_limit as u64,
+          peer_count    as usize,
+          channel_limit as usize,
           incoming_bandwidth.unwrap_or (0),
           outgoing_bandwidth.unwrap_or (0)
         );
@@ -103,7 +103,7 @@ impl Host {
 
   /// Number of peers allocated for this host
   #[inline]
-  pub fn peer_count (&self) -> u64 {
+  pub fn peer_count (&self) -> usize {
     unsafe {
       (*self.raw()).peerCount
     }
@@ -111,7 +111,7 @@ impl Host {
 
   /// Number of connected peers
   #[inline]
-  pub fn connected_peers (&self) -> u64 {
+  pub fn connected_peers (&self) -> usize {
     unsafe {
       (*self.raw()).connectedPeers
     }
@@ -119,7 +119,7 @@ impl Host {
 
   /// Maximum number of channels for incoming connections
   #[inline]
-  pub fn channel_limit (&self) -> u64 {
+  pub fn channel_limit (&self) -> usize {
     unsafe {
       (*self.raw()).channelLimit
     }
@@ -225,7 +225,7 @@ impl Host {
       let peer = ll::enet_host_connect (
         self.raw(),
         address.raw(),
-        channel_count as u64,
+        channel_count as usize,
         data
       );
       if peer.is_null() {
@@ -277,14 +277,14 @@ impl Host {
         Packet::Allocate { bytes, flags } => {
           raw = ll::enet_packet_create (
             bytes.as_ptr() as *const std::os::raw::c_void,
-            bytes.len() as u64,
+            bytes.len() as usize,
             flags.bits()
           );
         }
         Packet::NoAllocate { bytes, flags } => {
           raw = ll::enet_packet_create (
             bytes.as_ptr() as *const std::os::raw::c_void,
-            bytes.len() as u64,
+            bytes.len() as usize,
             flags.bits() | (ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32)
           );
         }
