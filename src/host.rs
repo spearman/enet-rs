@@ -236,7 +236,9 @@ impl Host {
   }
 
   /// Waits for events on the host specified and shuttles packets between the
-  /// host and its peers.
+  /// host and its peers. Sends queued messages and dispatches events.
+  /// Alternatively, `flush()` will send queued messages without dispatching
+  /// events.
   ///
   /// `timeout` is the number of milliseconds that ENet should wait for events.
   pub fn service (&mut self, timeout : u32) -> Result <Option <Event>, Error> {
@@ -248,7 +250,7 @@ impl Host {
       *event
     };
     Ok (Event::from_ll (event, self.hostdrop.clone()))
-  } // end service
+  }
 
   /// Checks for any queued events on the host and dispatches one if available
   #[inline]
@@ -263,7 +265,8 @@ impl Host {
     Ok (Event::from_ll (event, self.hostdrop.clone()))
   }
 
-  /// Send any queued messages without dispatching events
+  /// Send any queued messages without dispatching events. Alternatively,
+  /// `service()` will send queued messages and also dispatch events.
   #[inline]
   pub fn flush (&mut self) {
     unsafe { ll::enet_host_flush (self.hostdrop.raw) }
