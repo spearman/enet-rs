@@ -243,7 +243,8 @@ impl Host {
   /// `timeout` is the number of milliseconds that ENet should wait for events.
   pub fn service (&mut self, timeout : u32) -> Result <Option <Event>, Error> {
     let event = unsafe {
-      let event = std::mem::MaybeUninit::<ll::ENetEvent>::uninit().as_mut_ptr();
+      let mut mem = std::mem::MaybeUninit::<ll::ENetEvent>::uninit();
+      let event   = mem.as_mut_ptr();
       if ll::enet_host_service (self.hostdrop.raw, event, timeout) < 0 {
         return Err (Error::ServiceError)
       }
@@ -256,7 +257,8 @@ impl Host {
   #[inline]
   pub fn check_events (&mut self) -> Result <Option <Event>, Error> {
     let event = unsafe {
-      let event = std::mem::MaybeUninit::<ll::ENetEvent>::uninit().as_mut_ptr();
+      let mut mem = std::mem::MaybeUninit::<ll::ENetEvent>::uninit();
+      let event   = mem.as_mut_ptr();
       if ll::enet_host_check_events (self.hostdrop.raw, event) < 0 {
         return Err (Error::DispatchError)
       }
