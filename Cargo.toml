@@ -1,11 +1,15 @@
 [package]
-name = "enet"
-version = "0.0.4"
+name = "nsys-enet"
+version = "0.0.5"
 authors = ["Shane Pearman <spearman@github.com>"]
 license = "Apache-2.0"
 description = "Rust interface for the ENet reliable UDP library"
 repository = "https://github.com/spearman/enet-rs"
 readme = "README.md"
+edition = "2024"
+
+[lib]
+name = "enet"
 
 [dependencies]
 bitflags = "2.*"

@@ -1,2 +1,5 @@
 target
 Cargo.lock
+dependencies.dot
+dependencies.png
+rust-analyzer.log

@@ -1,6 +1,8 @@
-use {std, ll};
-use {peer, Address, EnetDrop, Event, Packet, Peer,
-  MAX_PEERS, MAX_CHANNEL_COUNT};
+use std;
+use ll;
+use crate::{
+  peer, Address, EnetDrop, Event, Packet, Peer, MAX_PEERS, MAX_CHANNEL_COUNT
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 //  structs                                                                   //
@@ -98,31 +100,25 @@ impl Host {
 
   #[inline]
   pub unsafe fn raw (&self) -> *mut ll::ENetHost {
-    self.hostdrop.raw()
+    unsafe { self.hostdrop.raw() }
   }
 
   /// Number of peers allocated for this host
   #[inline]
   pub fn peer_count (&self) -> usize {
-    unsafe {
-      (*self.raw()).peerCount
-    }
+    unsafe { (*self.raw()).peerCount }
   }
 
   /// Number of connected peers
   #[inline]
   pub fn connected_peers (&self) -> usize {
-    unsafe {
-      (*self.raw()).connectedPeers
-    }
+    unsafe { (*self.raw()).connectedPeers }
   }
 
   /// Maximum number of channels for incoming connections
   #[inline]
   pub fn channel_limit (&self) -> usize {
-    unsafe {
-      (*self.raw()).channelLimit
-    }
+    unsafe { (*self.raw()).channelLimit }
   }
 
   /// Total UDP packets sent.
@@ -130,9 +126,7 @@ impl Host {
   /// User must reset to prevent overflow.
   #[inline]
   pub fn total_sent_packets (&self) -> u32 {
-    unsafe {
-      (*self.raw()).totalSentPackets
-    }
+    unsafe { (*self.raw()).totalSentPackets }
   }
   pub fn reset_total_sent_packets (&mut self) {
     unsafe {
@@ -145,9 +139,7 @@ impl Host {
   /// User must reset to prevent overflow.
   #[inline]
   pub fn total_sent_data (&self) -> u32 {
-    unsafe {
-      (*self.raw()).totalSentPackets
-    }
+    unsafe { (*self.raw()).totalSentPackets }
   }
   pub fn reset_total_sent_data (&mut self) {
     unsafe {
@@ -160,9 +152,7 @@ impl Host {
   /// User must reset to prevent overflow.
   #[inline]
   pub fn total_received_packets (&self) -> u32 {
-    unsafe {
-      (*self.raw()).totalReceivedPackets
-    }
+    unsafe { (*self.raw()).totalReceivedPackets }
   }
   pub fn reset_total_received_packets (&mut self) {
     unsafe {
@@ -175,9 +165,7 @@ impl Host {
   /// User must reset to prevent overflow.
   #[inline]
   pub fn total_received_data (&self) -> u32 {
-    unsafe {
-      (*self.raw()).totalReceivedPackets
-    }
+    unsafe { (*self.raw()).totalReceivedPackets }
   }
   pub fn reset_total_received_data (&mut self) {
     unsafe {
