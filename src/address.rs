@@ -50,10 +50,16 @@ impl Address {
       Ok(Address { address })
     }
   }
+  /// # Safety
+  ///
+  /// Unsafe: returns a raw pointer.
   #[inline]
   pub unsafe fn raw (&self) -> *const ll::ENetAddress {
     &self.address
   }
+  /// # Safety
+  ///
+  /// Unsafe: returns a raw pointer.
   #[inline]
   pub unsafe fn raw_mut (&mut self) -> *mut ll::ENetAddress {
     &mut self.address

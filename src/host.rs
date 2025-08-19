@@ -92,12 +92,14 @@ impl Host {
     } // end match address
     Ok (Host {
       hostdrop: std::rc::Rc::new (HostDrop {
-        raw: host,
-        enetdrop
+        raw: host, enetdrop
       })
     })
   } // end new
 
+  /// # Safety
+  ///
+  /// Unsafe: returns raw pointer.
   #[inline]
   pub unsafe fn raw (&self) -> *mut ll::ENetHost {
     unsafe { self.hostdrop.raw() }
@@ -265,23 +267,21 @@ impl Host {
   /// Queue a packet to be sent to all peers associated with the host
   pub fn broadcast (&mut self, channel_id : u8, packet : Packet) {
     unsafe {
-      let raw;
-      match packet {
+      let raw = match packet {
         Packet::Allocate { bytes, flags } => {
-          raw = ll::enet_packet_create (
+          ll::enet_packet_create (
             bytes.as_ptr() as *const std::os::raw::c_void,
-            bytes.len() as usize,
-            flags.bits()
-          );
+            bytes.len(),
+            flags.bits())
         }
+        #[allow(clippy::unnecessary_cast)]  // NOTE: on windows ll flags are i32
         Packet::NoAllocate { bytes, flags } => {
-          raw = ll::enet_packet_create (
+          ll::enet_packet_create (
             bytes.as_ptr() as *const std::os::raw::c_void,
-            bytes.len() as usize,
-            flags.bits() | (ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32)
-          );
+            bytes.len(),
+            flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32)
         }
-      }
+      };
       ll::enet_host_broadcast (self.raw(), channel_id, raw)
     }
   }

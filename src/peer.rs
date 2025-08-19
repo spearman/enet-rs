@@ -3,6 +3,7 @@ use ll;
 use crate::{host, Address, Packet};
 
 /// (65536)
+#[allow(clippy::unnecessary_cast)]  // on windows ll flags are i32
 pub const PACKET_LOSS_SCALE : u32 = ll::ENET_PEER_PACKET_LOSS_SCALE as u32;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,13 +106,15 @@ impl Peer {
     }
   }
 
+  /// # Safety
+  ///
+  /// Unsafe: returns raw pointer.
   #[inline]
   pub unsafe fn raw (&self) -> *mut ll::ENetPeer {
     self.raw
   }
 
-  /// The `incomingPeerID` field represents the index into the local array of
-  /// peers.
+  /// The `incomingPeerID` field represents the index into the local array of peers.
   ///
   /// Note this is *not* the same as the `connectID` field.
   #[inline]
@@ -122,6 +125,7 @@ impl Peer {
   #[inline]
   pub fn state (&self) -> State {
     use enum_primitive::FromPrimitive;
+    #[allow(clippy::unnecessary_cast)] // on windows ll flags are i32
     unsafe { State::from_u32 ((*self.raw).state as u32).unwrap() }
   }
 
@@ -238,12 +242,11 @@ impl Peer {
     }
   }
 
-  pub fn send (&mut self, channel_id : u8, packet : Packet)
-    -> Result <(), SendError>
-  {
+  pub fn send (&mut self, channel_id : u8, packet : Packet) -> Result <(), SendError> {
     use enum_primitive::FromPrimitive;
     unsafe {
       if (*self.raw).state != ll::_ENetPeerState_ENET_PEER_STATE_CONNECTED {
+        #[allow(clippy::unnecessary_cast)]  // on windows ll flags are i32
         return Err (SendError::PeerNotConnected(
           State::from_u32 ((*self.raw).state as u32).unwrap()
         ))
@@ -251,36 +254,31 @@ impl Peer {
       if (*self.raw).channelCount as u8 <= channel_id {
         return Err (SendError::PeerNoChannelID (channel_id))
       }
-      let raw;
-      match packet {
+      let raw = match packet {
         Packet::Allocate { bytes, flags } => {
-          if (*self.hostdrop.raw()).maximumPacketSize < bytes.len() as usize {
+          if (*self.hostdrop.raw()).maximumPacketSize < bytes.len() {
             return Err (SendError::PacketExceedsMaximumSize (bytes.len()))
           }
           if bytes.is_empty() {
             return Err (SendError::PacketCreateZeroLength)
           }
-          raw = ll::enet_packet_create (
-            bytes.as_ptr() as *const std::os::raw::c_void,
-            bytes.len() as usize,
-            flags.bits()
-          );
+          ll::enet_packet_create (
+            bytes.as_ptr() as *const std::os::raw::c_void, bytes.len(), flags.bits())
         }
         Packet::NoAllocate { bytes, flags } => {
-          if (*(*self.raw).host).maximumPacketSize < bytes.len() as usize {
+          if (*(*self.raw).host).maximumPacketSize < bytes.len() {
             return Err (SendError::PacketExceedsMaximumSize(bytes.len()))
           }
           if bytes.is_empty() {
             return Err (SendError::PacketCreateZeroLength)
           }
-          raw = ll::enet_packet_create (
+          #[allow(clippy::unnecessary_cast)]  // on windows ll flags are i32
+          ll::enet_packet_create (
             bytes.as_ptr() as *const std::os::raw::c_void,
-            bytes.len() as usize,
-            flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE
-              as u32
-          );
+            bytes.len(),
+            flags.bits() | ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32)
         }
-      }
+      };
       if raw.is_null() {
         return Err (SendError::PacketCreateMallocFailure)
       }

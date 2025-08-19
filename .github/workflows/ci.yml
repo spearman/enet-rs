@@ -1,0 +1,47 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: rust:1.89
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+      - name: install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+      - name: install deps
+        run: apt-get update && apt-get install -y cmake libclang-dev
+      - name: clippy
+        run: cargo clippy --all-features
+
+  test:
+    runs-on: ubuntu-latest
+    container: rust:1.89
+    needs: check
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+      - name: install deps
+        run: apt-get update && apt-get install -y cmake libclang-dev
+      - name: test
+        run: cargo test --all-features

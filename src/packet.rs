@@ -30,19 +30,22 @@ bitflags! {
   #[derive(Clone, Copy, Debug)]
   pub struct Flags : u32 {
     /// Reliable, sequenced delivery
+    #[allow(clippy::unnecessary_cast)] // on windows ll flags are i32
     const RELIABLE    = ll::_ENetPacketFlag_ENET_PACKET_FLAG_RELIABLE as u32;
     /// Unsequenced delivery
+    #[allow(clippy::unnecessary_cast)] // on windows ll flags are i32
     const UNSEQUENCED = ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNSEQUENCED as u32;
     /// Packet will be fragmented if it exceeds the MTU
-    const UNRELIABLE_FRAGMENT =
-      ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT as u32;
+    #[allow(clippy::unnecessary_cast)] // on windows ll flags are i32
+    const UNRELIABLE_FRAGMENT = ll::_ENetPacketFlag_ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT
+      as u32;
     /// Packet will not allocate data and user must supply it instead
-    const NO_ALLOCATE =
-      ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32;
+    #[allow(clippy::unnecessary_cast)] // on windows ll flags are i32
+    const NO_ALLOCATE = ll::_ENetPacketFlag_ENET_PACKET_FLAG_NO_ALLOCATE as u32;
     // TODO: choose to expose the packet sent flag?
-    // Whether the packet has been sent from all queues it has been entered
-    // into.
-    //const SENT        = ll::_ENetPacketFlag_ENET_PACKET_FLAG_SENT;
+    // Whether the packet has been sent from all queues it has been entered into.
+    //#[allow(clippy::unnecessary_cast)] // on windows ll flags are i32
+    //const SENT        = ll::_ENetPacketFlag_ENET_PACKET_FLAG_SENT as u32;
   }
 }
 
@@ -51,6 +54,9 @@ bitflags! {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl PacketRecv {
+  /// # Safety
+  ///
+  /// Unsafe: raw pointer could be invalid.
   #[inline]
   pub unsafe fn from_raw (raw : *mut ll::ENetPacket) -> Self {
     PacketRecv { raw }
@@ -58,22 +64,18 @@ impl PacketRecv {
 
   #[inline]
   pub fn flags (&self) -> Flags {
-    unsafe {
-      Flags::from_bits ((*self.raw).flags).unwrap()
-    }
+    unsafe { Flags::from_bits ((*self.raw).flags).unwrap() }
   }
 
   #[inline]
   pub fn data_length (&self) -> usize {
-    unsafe {
-      (*self.raw).dataLength
-    }
+    unsafe { (*self.raw).dataLength }
   }
 
   #[inline]
   pub fn data (&self) -> &[u8] {
     unsafe {
-      let len = (*self.raw).dataLength as usize;
+      let len = (*self.raw).dataLength;
       std::slice::from_raw_parts ((*self.raw).data, len)
     }
   }
