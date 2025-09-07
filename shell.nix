@@ -1,6 +1,7 @@
 with import <nixpkgs> {};
 mkShell {
   buildInputs = [
+    cargo-udeps
     gdb   # required for rust-gdb
     gh
     clang # required to compile enet-sys

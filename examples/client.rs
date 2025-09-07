@@ -1,8 +1,6 @@
-extern crate ctrlc;
-extern crate enet;
-
 use std::sync::atomic;
 
+use ctrlc;
 use enet::*;
 
 macro_rules! show {
@@ -26,8 +24,8 @@ fn main() {
   }).unwrap();
 
   println!("initializing ENet...");
-  show!(enet::linked_version());
-  let enet = enet::initialize().unwrap();
+  show!(linked_version());
+  let enet = initialize().unwrap();
   println!("...ENet initialized");
   println!("creating ENet client host...");
   let mut client = enet.client_host_create (
@@ -38,12 +36,12 @@ fn main() {
   println!("...ENet client host created");
   let server_address  = Address::localhost (PORT);
   let mut server_peer = client.connect (&server_address, 2, 0).unwrap();
-  println!("client connecting to server at: {:?}", server_address);
+  println!("client connecting to server at: {server_address:?}");
   show!(server_peer.state());
   // wait up to 5 seconds for connection
   match client.service (5000).unwrap() {
     Some (event @ Event::Connect { .. })
-      => println!("got connection event: {:#?}", event),
+      => println!("got connection event: {event:#?}"),
     _ => panic!("client connection to server failed")
   }
   show!(server_peer.state());
@@ -67,15 +65,15 @@ fn main() {
     show!((iter, server_peer.state()));
     match client.service (SERVICE_MS) {
       Ok (Some (event @ Event::Connect    {..})) =>
-        println!("client received connection event:\n{:#?}",    event),
+        println!("client received connection event:\n{event:#?}"),
       Ok (Some (event @ Event::Disconnect {..})) => {
-        println!("client received disconnection event:\n{:#?}", event);
+        println!("client received disconnection event:\n{event:#?}");
         running.store (false, atomic::Ordering::SeqCst)
       }
       Ok (Some (event @ Event::Receive    {..})) =>
-        println!("client received packet event:\n{:#?}",        event),
+        println!("client received packet event:\n{event:#?}"),
       Ok (None) => {}
-      Err (err) => println!("client received error: {:?}", err)
+      Err (err) => println!("client received error: {err:?}")
     }
     iter += 1;
   }

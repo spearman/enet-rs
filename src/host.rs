@@ -10,14 +10,14 @@ use crate::{
 
 /// An ENet host for communicating with peers.
 ///
-/// A 'Host' cannot be sent accross threads but will keep Enet 
+/// A `Host` cannot be sent accross threads but will keep Enet alive.
 #[derive(Clone, Debug)]
 pub struct Host {
   hostdrop : std::rc::Rc <HostDrop>
 }
 
 #[derive(Debug, PartialEq)]
-pub (crate) struct HostDrop {
+pub(crate) struct HostDrop {
   raw      : *mut ll::ENetHost,
   enetdrop : std::sync::Arc <EnetDrop>
 }
@@ -36,9 +36,9 @@ pub enum Error {
 
 #[derive(Clone, Debug)]
 pub enum CreateError {
-  /// Maximum peer count is enet::MAX_PEERS (4096)
+  /// Maximum peer count is `enet::MAX_PEERS` (4096)
   TooManyPeers    (u32),
-  /// Maximum channel count is enet::MAX_CHANNEL_COUNT (255)
+  /// Maximum channel count is `enet::MAX_CHANNEL_COUNT` (255)
   TooManyChannels (u32),
   ReturnedNull
 }
@@ -48,7 +48,7 @@ pub enum CreateError {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Host {
-  pub (crate) fn new (
+  pub(crate) fn new (
     address            : Option <Address>,
     peer_count         : u32,
     channel_limit      : Option <u32>,
@@ -178,9 +178,8 @@ impl Host {
 
   /// Initiate a connection with a remote host.
   ///
-  /// When connecting to a peer with the `host.connect()` method, a `Peer`
-  /// representing the connection will be created in the `PeerState::Connecting`
-  /// state:
+  /// When connecting to a peer with the `host.connect()` method, a `Peer` representing
+  /// the connection will be created in the `PeerState::Connecting` state:
   /// ```
   /// # use enet::Address;
   /// # let enet = enet::initialize().unwrap();
@@ -274,7 +273,7 @@ impl Host {
             bytes.len(),
             flags.bits())
         }
-        #[allow(clippy::unnecessary_cast)]  // NOTE: on windows ll flags are i32
+        #[expect(clippy::unnecessary_cast)]  // NOTE: on windows ll flags are i32
         Packet::NoAllocate { bytes, flags } => {
           ll::enet_packet_create (
             bytes.as_ptr() as *const std::os::raw::c_void,
@@ -290,7 +289,7 @@ impl Host {
 
 impl HostDrop {
   #[inline]
-  pub unsafe fn raw (&self) -> *mut ll::ENetHost {
+  pub(crate) const unsafe fn raw (&self) -> *mut ll::ENetHost {
     self.raw
   }
 }

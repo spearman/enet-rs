@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
 
 set -e
+
+echo "+ git status --porcelain"
+git_status="$(git status --porcelain)"
+if [ "$git_status" != "" ]; then
+  echo "$git_status"
+  echo "pre-push hook failed: working directory is dirty"
+  exit 1
+fi
+echo "working directory is clean"
+
 set -x
 
-if rg "FIXME"; then
+if rg "FIXME" --hidden --glob="!$0" "$PWD"; then
   echo "pre-push hook failed: FIXME not allowed"
   exit 1
 fi
+cargo +nightly udeps --workspace --all-targets --all-features
 export RUSTFLAGS="-D warnings"
-cargo clippy --all-features
-cargo test --all-features
+cargo clippy --workspace --all-targets --all-features
+cargo test --workspace --all-features
 yamllint --no-warnings .github/workflows/ci.yml
 
 exit 0

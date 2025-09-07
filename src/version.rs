@@ -7,23 +7,23 @@ pub struct Version {
 
 impl Version {
   #[inline]
-  pub fn from_ll (version : ll::ENetVersion) -> Self {
+  pub const fn from_ll (version : ll::ENetVersion) -> Self {
     Version { version }
   }
   #[inline]
-  pub fn create (major : u32, minor : u32, patch : u32) -> Self {
+  pub const fn create (major : u32, minor : u32, patch : u32) -> Self {
     Version { version: (major << 16) | (minor << 8) | patch }
   }
   #[inline]
-  pub fn get_major (self) -> u32 {
+  pub const fn get_major (self) -> u32 {
     (self.version >> 16) & 0xff
   }
   #[inline]
-  pub fn get_minor (self) -> u32 {
+  pub const fn get_minor (self) -> u32 {
     (self.version >> 8) & 0xff
   }
   #[inline]
-  pub fn get_patch (self) -> u32 {
+  pub const fn get_patch (self) -> u32 {
     self.version & 0xff
   }
 }

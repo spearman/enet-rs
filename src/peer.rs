@@ -3,7 +3,7 @@ use ll;
 use crate::{host, Address, Packet};
 
 /// (65536)
-#[allow(clippy::unnecessary_cast)]  // on windows ll flags are i32
+#[expect(clippy::unnecessary_cast)]  // on windows ll flags are i32
 pub const PACKET_LOSS_SCALE : u32 = ll::ENET_PEER_PACKET_LOSS_SCALE as u32;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -96,7 +96,7 @@ pub enum SendError {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Peer {
-  pub (crate) unsafe fn from_raw (
+  pub(crate) const unsafe fn from_raw (
     peer     : *mut ll::ENetPeer,
     hostdrop : std::rc::Rc <host::HostDrop>
   ) -> Self {
@@ -110,7 +110,7 @@ impl Peer {
   ///
   /// Unsafe: returns raw pointer.
   #[inline]
-  pub unsafe fn raw (&self) -> *mut ll::ENetPeer {
+  pub const unsafe fn raw (&self) -> *mut ll::ENetPeer {
     self.raw
   }
 
@@ -125,7 +125,7 @@ impl Peer {
   #[inline]
   pub fn state (&self) -> State {
     use enum_primitive::FromPrimitive;
-    #[allow(clippy::unnecessary_cast)] // on windows ll flags are i32
+    #[expect(clippy::unnecessary_cast)] // on windows ll flags are i32
     unsafe { State::from_u32 ((*self.raw).state as u32).unwrap() }
   }
 
@@ -246,7 +246,7 @@ impl Peer {
     use enum_primitive::FromPrimitive;
     unsafe {
       if (*self.raw).state != ll::_ENetPeerState_ENET_PEER_STATE_CONNECTED {
-        #[allow(clippy::unnecessary_cast)]  // on windows ll flags are i32
+        #[expect(clippy::unnecessary_cast)]  // on windows ll flags are i32
         return Err (SendError::PeerNotConnected(
           State::from_u32 ((*self.raw).state as u32).unwrap()
         ))
@@ -272,7 +272,7 @@ impl Peer {
           if bytes.is_empty() {
             return Err (SendError::PacketCreateZeroLength)
           }
-          #[allow(clippy::unnecessary_cast)]  // on windows ll flags are i32
+          #[expect(clippy::unnecessary_cast)]  // on windows ll flags are i32
           ll::enet_packet_create (
             bytes.as_ptr() as *const std::os::raw::c_void,
             bytes.len(),

@@ -20,7 +20,7 @@ pub enum AddressError {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Address {
-  pub (crate) fn from_ll (address : ll::ENetAddress) -> Self {
+  pub(crate) const fn from_ll (address : ll::ENetAddress) -> Self {
     Address { address }
   }
   /// 127.0.0.1
@@ -29,15 +29,12 @@ impl Address {
     Address::with_hostname ("127.0.0.1", port).unwrap()
   }
   /// Creates an address with `ENET_HOST_ANY` (0.0.0.0)
-  pub fn any (port : u16) -> Address {
+  pub const fn any (port : u16) -> Address {
     let host     = ll::ENET_HOST_ANY;
     let address  = ll::ENetAddress { host, port };
     Address { address }
   }
-  pub fn with_hostname (
-    hostname : &str,
-    port     : u16
-  ) -> Result<Address, AddressError> {
+  pub fn with_hostname (hostname : &str, port : u16) -> Result<Address, AddressError> {
     let cname = std::ffi::CString::new(hostname)?;
     unsafe {
       let address = {
@@ -54,26 +51,26 @@ impl Address {
   ///
   /// Unsafe: returns a raw pointer.
   #[inline]
-  pub unsafe fn raw (&self) -> *const ll::ENetAddress {
+  pub const unsafe fn raw (&self) -> *const ll::ENetAddress {
     &self.address
   }
   /// # Safety
   ///
   /// Unsafe: returns a raw pointer.
   #[inline]
-  pub unsafe fn raw_mut (&mut self) -> *mut ll::ENetAddress {
+  pub const unsafe fn raw_mut (&mut self) -> *mut ll::ENetAddress {
     &mut self.address
   }
   #[inline]
-  pub fn host (self) -> u32 {
+  pub const fn host (self) -> u32 {
     self.address.host
   }
   #[inline]
-  pub fn host_bytes (self) -> [u8; 4] {
+  pub const fn host_bytes (self) -> [u8; 4] {
     self.address.host.to_le_bytes()
   }
   #[inline]
-  pub fn port (self) -> u16 {
+  pub const fn port (self) -> u16 {
     self.address.port
   }
 } // end impl Address

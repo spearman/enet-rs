@@ -1,8 +1,6 @@
-extern crate ctrlc;
-extern crate enet;
-
 use std::sync::atomic;
 
+use ctrlc;
 use enet::*;
 
 macro_rules! show {
@@ -26,7 +24,7 @@ fn main() {
   }).unwrap();
 
   println!("initializing ENet...");
-  show!(enet::linked_version());
+  show!(linked_version());
   let enet = initialize().unwrap();
   println!("...ENet initialized");
   println!("creating ENet server host...");
@@ -40,7 +38,7 @@ fn main() {
   println!("...ENet server host created");
 
   // service loop
-  println!("awaiting connections on port {}", PORT);
+  println!("awaiting connections on port {PORT}");
   let mut client_peer = None;
   let mut iter        = 0;
   println!("entering service loop...");
@@ -54,7 +52,7 @@ fn main() {
     show!((iter, client_peer.as_ref().map (Peer::state)));
     match server.service (SERVICE_MS) {
       Ok (Some (event @ Event::Connect    {..})) => {
-        println!("server received connection event:\n{:#?}",    event);
+        println!("server received connection event:\n{event:#?}");
         if let Event::Connect { peer, .. } = event {
           if client_peer.is_none() {
             client_peer = Some (peer.clone());
@@ -62,13 +60,13 @@ fn main() {
         } else { unreachable!() }
       }
       Ok (Some (event @ Event::Disconnect {..})) => {
-        println!("server received disconnection event:\n{:#?}", event);
+        println!("server received disconnection event:\n{event:#?}");
         client_peer = None;
       }
       Ok (Some (event @ Event::Receive    {..})) =>
-        println!("server received packet event:\n{:#?}",        event),
+        println!("server received packet event:\n{event:#?}"),
       Ok  (None) => {}
-      Err (err)  => println!("service error: {:?}", err)
+      Err (err)  => println!("service error: {err:?}")
     }
     iter += 1;
   }

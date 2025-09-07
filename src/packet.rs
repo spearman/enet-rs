@@ -58,7 +58,7 @@ impl PacketRecv {
   ///
   /// Unsafe: raw pointer could be invalid.
   #[inline]
-  pub unsafe fn from_raw (raw : *mut ll::ENetPacket) -> Self {
+  pub const unsafe fn from_raw (raw : *mut ll::ENetPacket) -> Self {
     PacketRecv { raw }
   }
 

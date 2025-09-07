@@ -1,6 +1,5 @@
 //! <http://enet.bespin.org/Tutorial.html>
 
-extern crate enet;
 use enet::address;
 
 fn main() {
