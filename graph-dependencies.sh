@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
+
+set -e
 set -x
 
-cargo deps --no-transitive-deps 2> /dev/null > dependencies.dot \
+cargo update
+cargo deps --no-transitive-deps > dependencies.dot \
   && dot -Tpng dependencies.dot > dependencies.png \
   && feh dependencies.png
 

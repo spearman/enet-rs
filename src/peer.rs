@@ -1,4 +1,7 @@
 use std;
+use enum_primitive_derive::Primitive;
+use num_traits;
+
 use ll;
 use crate::{host, Address, Packet};
 
@@ -44,30 +47,21 @@ pub struct Peer {
 //  enums                                                                     //
 ////////////////////////////////////////////////////////////////////////////////
 
-enum_from_primitive! {
-  #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-  pub enum State {
-    Disconnected         = ll::_ENetPeerState_ENET_PEER_STATE_DISCONNECTED
-      as isize,
-    Connecting           = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTING
-      as isize,
-    AcknowledgingConnect = ll::_ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_CONNECT
-      as isize,
-    ConnectionPending    = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTION_PENDING
-      as isize,
-    ConnectionSucceeded  = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTION_SUCCEEDED
-      as isize,
-    Connected            = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTED
-      as isize,
-    DisconnectLater      = ll::_ENetPeerState_ENET_PEER_STATE_DISCONNECT_LATER
-      as isize,
-    Disconnecting        = ll::_ENetPeerState_ENET_PEER_STATE_DISCONNECTING
-      as isize,
-    AcknowledgingDisconnect = ll::_ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT
-      as isize,
-    Zombie               = ll::_ENetPeerState_ENET_PEER_STATE_ZOMBIE
-      as isize
-  }
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Primitive)]
+pub enum State {
+  Disconnected         = ll::_ENetPeerState_ENET_PEER_STATE_DISCONNECTED       as isize,
+  Connecting           = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTING         as isize,
+  AcknowledgingConnect = ll::_ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_CONNECT
+    as isize,
+  ConnectionPending    = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTION_PENDING as isize,
+  ConnectionSucceeded  = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTION_SUCCEEDED
+    as isize,
+  Connected            = ll::_ENetPeerState_ENET_PEER_STATE_CONNECTED          as isize,
+  DisconnectLater      = ll::_ENetPeerState_ENET_PEER_STATE_DISCONNECT_LATER   as isize,
+  Disconnecting        = ll::_ENetPeerState_ENET_PEER_STATE_DISCONNECTING      as isize,
+  AcknowledgingDisconnect = ll::_ENetPeerState_ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT
+    as isize,
+  Zombie               = ll::_ENetPeerState_ENET_PEER_STATE_ZOMBIE             as isize
 }
 
 #[derive(Debug)]
@@ -124,7 +118,7 @@ impl Peer {
 
   #[inline]
   pub fn state (&self) -> State {
-    use enum_primitive::FromPrimitive;
+    use num_traits::FromPrimitive;
     #[expect(clippy::unnecessary_cast)] // on windows ll flags are i32
     unsafe { State::from_u32 ((*self.raw).state as u32).unwrap() }
   }
@@ -243,7 +237,7 @@ impl Peer {
   }
 
   pub fn send (&mut self, channel_id : u8, packet : Packet) -> Result <(), SendError> {
-    use enum_primitive::FromPrimitive;
+    use num_traits::FromPrimitive;
     unsafe {
       if (*self.raw).state != ll::_ENetPeerState_ENET_PEER_STATE_CONNECTED {
         #[expect(clippy::unnecessary_cast)]  // on windows ll flags are i32

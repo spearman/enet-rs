@@ -1,8 +1,5 @@
 //! Rust interface for the [ENet reliable UDP library](http://enet.bespin.org/)
 
-#[macro_use] extern crate bitflags;
-#[macro_use] extern crate enum_primitive;
-
 extern crate enet_sys as ll;
 
 use std::sync::atomic;
