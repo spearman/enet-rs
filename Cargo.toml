@@ -1,6 +1,6 @@
 [package]
 name = "nsys-enet"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Shane Pearman <spearman@github.com>"]
 license = "Apache-2.0"
 description = "Rust interface for the ENet reliable UDP library"
@@ -16,6 +16,7 @@ bitflags = "2.*"
 enum-primitive-derive = "0.3.*"
 num-traits = "0.2.*"
 enet-sys = "1.*"
+serde = { version = "1.*", features = ["derive"], optional = true }
 
 [dev-dependencies]
 ctrlc = "3.*"

@@ -1,4 +1,6 @@
 use {std, ll};
+#[cfg(feature = "serde")]
+use serde;
 
 #[derive(Clone)]
 pub struct Address {
@@ -86,6 +88,26 @@ impl std::fmt::Debug for Address {
     let port = self.address.port;
     write!(f, "Address {{ host: {}.{}.{}.{}, port: {} }}",
       host[0], host[1], host[2], host[3], port)
+  }
+}
+#[cfg(feature = "serde")]
+impl serde::Serialize for Address {
+  fn serialize <S> (&self, serializer : S) -> Result <S::Ok, S::Error> where
+    S : serde::Serializer
+  {
+    #[derive(serde::Serialize)]
+    struct AddressRepr {
+      host : String,
+      port : u16
+    }
+    let repr = {
+      let host = self.address.host.to_le_bytes();
+      AddressRepr {
+        host: format!("{}.{}.{}.{}", host[0], host[1], host[2], host[3]),
+        port: self.address.port
+      }
+    };
+    repr.serialize (serializer)
   }
 }
 

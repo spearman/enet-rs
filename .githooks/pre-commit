@@ -3,6 +3,6 @@
 set -e
 set -x
 
-cargo check --workspace --all-targets --all-features
+cargo check --all-targets --all-features
 
 exit 0
